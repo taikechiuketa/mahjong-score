@@ -42,7 +42,12 @@
 #statsTable .player-stats-link,#ratingTable .player-stats-link{min-height:28px;padding:2px 0;line-height:1.25}
 .sort-heading{background:none;color:inherit;font:inherit;padding:4px 0;white-space:nowrap}.sort-heading span{font-size:.8em;color:#a90022}
 #statsPeriod,#totalsMode,#ratingMode{width:auto;max-width:100%}
-#totalsPanel>label{display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
+#totalsPanel>label,#ratingPanel>label{display:inline-flex;align-items:center;gap:8px;margin:0 0 16px;line-height:1.25}
+#totalsMode,#ratingMode{width:8rem;min-width:8rem;height:38px;min-height:38px;padding:0 8px;margin:0;font-size:16px;line-height:normal}
+#totalsMode:focus,#ratingMode:focus{outline:2px solid #c60027;outline-offset:-2px}
+#playerStatsResults .metric-value,#playerStatsResults .metric-rank{white-space:nowrap;font-variant-numeric:tabular-nums}
+#playerStatsResults .metric-rank{width:5em;text-align:right;color:#555861}
+#playerStatsResults .rank-breakdown{white-space:normal}
 </style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header>
 <p><a href="./rules.html">公式ルールブック</a></p>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイント倍率<input id="rate" type="number" min="0" step="1"></label><label>チップレート（pt/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
@@ -633,10 +638,10 @@ function renderPlayerStats(){
     ['ラス率',percent(totals.lasts),r=>ratio(r,r.lasts),true],
     ['平均順位',averageRank,r=>ratio(r,r.ranks.reduce((sum,n,i)=>sum+n*(i+1),0)),true],
     ['平均pt',averagePt,r=>r.rounds?r.pt/r.rounds:null],
-    ['着順内訳',totals.ranks.slice(0,mode==='normal'?3:4).map((n,i)=>`${i+1}着 ${n}回${placement(r=>rankCount(r)?r.ranks[i]:null)}`).join(' ／ ')]
+    ['着順内訳',totals.ranks.slice(0,mode==='normal'?3:4).map((n,i)=>`${i+1}着 ${n}回`).join(' ／ ')]
   );
   $('playerStatsResults').innerHTML='<table class="history-table"><tbody>'+metrics.map(([label,result,metric,ascending])=>
-    `<tr><th scope="row">${label}</th><td>${result}${metric?placement(metric,ascending):''}</td></tr>`).join('')+'</tbody></table>';
+    `<tr><th scope="row">${label}</th>${metric?`<td class="metric-value">${result}</td><td class="metric-rank">${placement(metric,ascending)}</td>`:`<td class="rank-breakdown" colspan="2">${result}</td>`}</tr>`).join('')+'</tbody></table>';
 }
 $('statsTable').onclick=e=>{
   const button=e.target.closest('[data-player-stats]');
