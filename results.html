@@ -76,10 +76,14 @@ const historyEntries=()=>published.map((set,index)=>({set,index}));
 function roundRule(mode){return mode==='north'||mode==='yonma'?mode:'normal'}
 function roundSize(mode){return roundRule(mode)==='normal'?3:4}
 function roundLabel(mode){return {normal:'三麻',north:'四人三麻',yonma:'四人麻雀'}[roundRule(mode)]}
+function rankingVisible(player){
+  const entry=master.find(m=>m.id===player.masterId)||master.find(m=>m.name===player.name);
+  return (entry?.rankingVisible??player.rankingVisible)!==false;
+}
 function setResults(set,mode='all'){
   const results=set.players.map(p=>({
     id:p.masterId||master.find(m=>m.name===p.name)?.id||'name:'+p.name,name:master.find(m=>m.id===p.masterId)?.name||p.name,
-    pt:0,chips:value(p.chips),rounds:0,ranks:[0,0,0,0],lasts:0
+    rankingVisible:rankingVisible(p),pt:0,chips:value(p.chips),rounds:0,ranks:[0,0,0,0],lasts:0
   }));
   for(const round of set.rounds){
     const rule=roundRule(round.mode);
@@ -91,7 +95,7 @@ function setResults(set,mode='all'){
       const result=results[i];
       result.pt+=Number(score);
       result.rounds++;
-      played.push({result,score:Number(score)});
+      played.push({result,score:Number(score),rankingVisible:rankingVisible(player)});
     });
     if(played.length!==(roundSize(round.mode)))continue;
     for(const player of played){
@@ -126,6 +130,7 @@ function aggregateStats(sets,mode='all'){
       if(mode!=='all'&&!r.rounds&&!(chips&&r.chips))continue;
       const a=stats.get(r.id)||{id:r.id,name:r.name,pt:0,chips:0,rounds:0,yen:0,sets:0,lasts:0,ranks:[0,0,0,0]};
       a.name=r.name;
+      a.rankingVisible=r.rankingVisible;
       a.pt+=r.pt;
       a.chips+=chips?r.chips:0;
       a.rounds+=r.rounds;
@@ -173,7 +178,7 @@ function renderStats(){
   const matches=statsDateFilter();
   if(!$('ratingPanel').hidden)renderRatings(history.map(entry=>entry.set),matches);
   const mode=$('totalsMode').value;
-  const rows=aggregateStats(history.map(entry=>entry.set).filter(matches),mode);
+  const rows=aggregateStats(history.map(entry=>entry.set).filter(matches),mode).filter(r=>r.rankingVisible);
   const rankCount=mode==='all'?0:roundSize(mode);
   const headings=['プレイヤー','累計ポイント','収支','通算セット数','通算半荘数','通算チップ','トップ率','ラス率',...Array.from({length:rankCount},(_,i)=>(i+1)+'着')];
   $('statsTable').innerHTML=sortedTable('statsTable',headings,rows,r=>{
@@ -237,6 +242,7 @@ function calculateRatings(sets,mode){
         }
         const entry=players.get(player.id)||{id:player.id,history:[]};
         entry.name=player.name;
+        entry.rankingVisible=player.rankingVisible;
         entry.rating=player.before+change;
         entry.change=Math.round(entry.rating)-Math.round(player.before);
         entry.history.push({date:set.date,rating:entry.rating,before:player.before});
@@ -248,7 +254,8 @@ function calculateRatings(sets,mode){
 }
 let ratingPlayerId;
 function renderRatings(sets,matches){
-  const rows=calculateRatings(sets,$('ratingMode').value);
+  const ratings=calculateRatings(sets,$('ratingMode').value);
+  const rows=ratings.filter(p=>p.rankingVisible);
   $('ratingTable').innerHTML=sortedTable('ratingTable',['プレイヤー','現在R','対象半荘','直近'],rows,p=>[p.name,p.rating,p.history.length,p.change])+'<tbody>'+rows.map(p=>
     `<tr><td><button type="button" class="player-stats-link" data-rating-player="${esc(p.id)}">${esc(p.name)}</button></td><td><b>${Math.round(p.rating)}</b>${p.history.length<20?' <small>暫定</small>':''}</td><td>${p.history.length}</td><td>${fmt(p.change)}</td></tr>`).join('')+'</tbody>';
   bindTableSort('ratingTable');
@@ -361,7 +368,7 @@ function renderPlayerStats(){
   const percent=count=>ranked?(count*100/ranked).toFixed(1)+'%':'—';
   const averageRank=ranked?(totals.ranks.reduce((sum,count,i)=>sum+count*(i+1),0)/ranked).toFixed(2):'—';
   const averagePt=totals.rounds?(totals.pt/totals.rounds).toFixed(2)+' pt':'—';
-  const peers=aggregateStats(sets,mode);
+  const peers=aggregateStats(sets,mode).filter(r=>r.rankingVisible);
   const rankCount=r=>r.ranks.reduce((sum,n)=>sum+n,0);
   const ratio=(r,n)=>rankCount(r)?n/rankCount(r):null;
   function placement(metric,ascending=false){
