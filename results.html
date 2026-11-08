@@ -1,32 +1,39 @@
-<!doctype html>
-<html lang="ja">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex">
-<title>たけちゃお成績管理｜閲覧専用</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#f3f3f5;color:#171b21;font-family:system-ui,sans-serif}
-main{max-width:740px;margin:auto;padding:16px}header{display:flex;gap:14px;align-items:center;background:#171b21;color:white;border-bottom:4px solid #c60027;padding:12px;border-radius:14px}
-img{border-radius:8px;background:white;object-fit:contain}h1{font-size:clamp(18px,5vw,24px);margin:0}header p{margin:4px 0 0;font-size:13px}
-section{margin-top:14px;background:white;padding:14px;border-radius:14px}h2{font-size:17px;margin:0}#status{font-size:13px;color:#555861}
-table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px 4px;border-bottom:1px solid #e4e4e7;text-align:right}th:first-child,td:first-child{text-align:left;overflow-wrap:anywhere}td:last-child{font-weight:700;color:#a90022}
-nav{display:flex;gap:6px;margin-top:14px}nav button{flex:1;border:0;padding:9px 4px;border-radius:8px;background:white;color:#171b21;font-weight:700}nav button[aria-pressed=true]{background:#c60027;color:white}.scroll{overflow:auto}details{padding:8px 0;border-bottom:1px solid #e4e4e7}summary{cursor:pointer}.negative{color:#a90022}
-.player-link{border:0;background:none;color:#a90022;font:inherit;font-weight:bold;text-decoration:underline;white-space:nowrap;min-height:44px;cursor:pointer}dialog{width:min(92vw,440px);height:min(600px,90dvh);border:0;border-radius:14px;padding:16px;overflow:auto}dialog::backdrop{background:#0008}dialog nav button{background:#f3f3f5}dialog form{margin-top:14px;text-align:right}
-</style>
-<main>
-<header><img src="./takechao-logo.jpg" alt="TAKECHI" width="56" height="62"><div><h1>たけちゃお成績管理</h1><p>閲覧専用</p></div></header>
-<nav aria-label="成績の表示"><button type="button" data-panel="standings" aria-pressed="true">通算成績</button><button type="button" data-panel="history" aria-pressed="false">半荘履歴</button><button type="button" data-panel="rating" aria-pressed="false">レーティング</button></nav><section id="standings">
-<h2>通算成績</h2>
-<p id="status" role="status">読み込み中…</p>
-<div class="scroll"><table id="results" hidden>
-<thead><tr><th scope="col">プレイヤー</th><th scope="col">セット</th><th scope="col">対局数</th><th scope="col">累計pt</th><th scope="col">1着</th><th scope="col">2着</th><th scope="col">3着</th><th scope="col">4着</th><th scope="col">連対率</th></tr></thead>
-<tbody></tbody>
-</table></div>
-</section><section id="history" hidden><h2>半荘履歴</h2><div id="publicHistory"></div></section><section id="rating" hidden><h2>レーティング</h2><label>ルール <select id="publicRatingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><div id="publicRating"></div></section>
-</main>
-<dialog id="personDialog" aria-labelledby="personTitle"><h2 id="personTitle"></h2><nav id="personModes" aria-label="ルール"><button type="button" data-mode="all">すべて</button><button type="button" data-mode="normal">三麻</button><button type="button" data-mode="north">四人三麻</button><button type="button" data-mode="trend">推移グラフ</button></nav><div id="personStats"></div><form method="dialog"><button>閉じる</button></form></dialog>
-<script>
-const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#171b21"><title>たけチャート｜閲覧専用</title><style>
+:root{font-family:system-ui,-apple-system,'Noto Sans JP',sans-serif;background:#f3f3f5;color:#171b21}*{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:14px 12px 50px}h1{font-size:23px;margin:6px 0 2px}h2{font-size:17px;margin:0 0 12px}.sub{font-size:12px;color:#555861}.card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:15px;margin:14px 0;box-shadow:0 2px 10px #171b210a}.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.buttons{display:flex;gap:8px;flex-wrap:wrap}button{border:0;border-radius:10px;background:#c60027;color:white;padding:10px 13px;font-size:14px;font-weight:650;cursor:pointer}button.secondary{background:#f3f3f5;color:#171b21}button.danger{background:#fff0ee;color:#ae3b2c}input,select{border:1px solid #e4e4e7;border-radius:8px;padding:9px 7px;font-size:16px;min-width:0;background:#fff;color:#171b21}input:focus,select:focus{outline:2px solid #d5425e}label{font-size:12px;color:#555861;display:grid;gap:5px}.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.settings input{width:100%}.sheet-wrap{overflow:auto;max-height:62vh;border:1px solid #e4e4e7;border-radius:12px}.sheet{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content;text-align:center;font-size:13px}.sheet th,.sheet td{padding:5px;border-right:1px solid #e4e4e7;border-bottom:1px solid #e4e4e7;min-width:84px}.sheet th{position:sticky;top:0;z-index:2;background:#f3f3f5}.sheet .first{position:sticky;left:0;z-index:3;min-width:105px;background:#f3f3f5}.sheet th.first{z-index:4;background:#e4e4e7}.sheet input.score{width:76px;text-align:center;font-weight:650;padding:10px 3px;touch-action:pan-y}.sheet .skip{width:76px;background:#e4e4e7;color:#555861;border:1px dashed #a5a5ad;border-radius:8px;min-height:43px}.sheet select{width:99px;font-size:12px;padding:7px 2px}.sheet .total td{position:sticky;bottom:0;z-index:2;background:#f3f3f5;font-weight:750}.sheet .total .first{z-index:4;background:#e4e4e7}.positive{color:#171b21}.negative{color:#c04335}.small{font-size:11px}.hint{font-size:12px;color:#555861;line-height:1.7}.pill{font-size:11px;border-radius:20px;background:#f3f3f5;color:#171b21;padding:5px 8px}.settle{width:100%;border-collapse:collapse;font-size:13px}.settle th,.settle td{padding:10px 5px;border-bottom:1px solid #e4e4e7;text-align:right}.settle th:first-child,.settle td:first-child{text-align:left}.settle input{width:70px;text-align:right}.warn{color:#ae5940;font-size:12px}.hidden{display:none}@media(min-width:600px){.settings{grid-template-columns:repeat(4,1fr)}}
+
+/* Six-player compact sheet: fit the viewport without horizontal scrolling. */
+.sheet{min-width:0;table-layout:fixed;width:100%}
+.sheet th,.sheet td{min-width:0;padding:4px 2px;overflow:hidden}
+.sheet .first{min-width:0;width:66px;left:0}
+.sheet input.score,.sheet .skip{width:100%;min-width:0;min-height:40px;padding:7px 0;font-size:14px;border-radius:5px}
+.sheet select{width:100%;font-size:10px;padding:5px 0;letter-spacing:-.5px}
+.sheet .player-name{display:block;width:100%;border:0;background:transparent;color:inherit;padding:4px 0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet .round-delete{padding:3px 5px;margin-top:3px;font-size:10px}
+.sheet .total td{font-size:12px;overflow-wrap:anywhere}
+@media(max-width:420px){main{padding:8px 6px 40px}.card{padding:9px;margin:10px 0}.sheet .first{width:58px}.sheet th,.sheet td{padding:3px 1px}.sheet input.score{font-size:13px}.sheet .player-name{font-size:11px}.sheet select{font-size:9px}}
+.sheet-wrap{max-height:none}
+
+.master-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #e4e4e7}.master-row .buttons button{padding:6px 9px;font-size:12px}.master-list{max-height:280px;overflow:auto}.master-row label{display:flex;align-items:center;gap:8px;font-size:14px}.master-row input[type=checkbox]{width:19px;height:19px}dialog{border:0;border-radius:16px;padding:18px;width:min(92vw,440px);box-shadow:0 12px 40px #0004}dialog::backdrop{background:#0007}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
+ .remove-player{display:block;margin:0 auto;padding:0 4px;border:0;background:transparent;color:#a63b36;font-size:15px;line-height:18px;cursor:pointer}
+.navtabs{display:flex;gap:8px;margin:14px 0}.navtabs button{flex:1;padding:12px 5px}.navtabs button:not(.active){background:#f3f3f5;color:#555861}.navtabs button.active{background:#c60027;color:white}.history-table{width:100%;border-collapse:collapse;font-size:13px}.history-table th,.history-table td{padding:9px 5px;border-bottom:1px solid #ddd;text-align:right}.history-table th:first-child,.history-table td:first-child{text-align:left}.history-table .positive{color:#171b21}.history-table .negative{color:#b23b36}.stats-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}#statsTable th{white-space:nowrap}.stats-filter select{max-width:190px}.history-card{padding:12px 0;border-bottom:1px solid #ddd}.history-card summary{cursor:pointer;font-weight:650}.history-card table{width:100%;margin-top:8px;font-size:13px}
+.sheet tr.score-warning td{background:#ffe6e3;color:#932c23}
+.sheet tr.score-warning input.score,.settle.chip-warning input[data-chip]{background:#fff1ef;border-color:#ce6b60}
+#statsTable .player-stats-link,#ratingTable .player-stats-link{background:transparent;color:#c60027;padding:4px 0;min-height:44px;font:inherit;font-weight:600;text-align:left;white-space:nowrap;text-decoration:underline;text-underline-offset:3px}
+#playerStatsDialog{height:min(680px,calc(100vh - 24px));height:min(680px,calc(100dvh - 24px));max-height:none;overflow-y:auto}
+#playerStatsTabs button{flex:1 1 0;min-width:0}
+#playerRuleTrend{font-size:12px}
+.player-trend{margin:12px 0}
+.player-trend figcaption{font-size:14px;font-weight:650}
+.player-trend svg{display:block;width:100%;height:auto}
+.brand-header{display:flex;align-items:center;gap:14px;padding:12px 14px;background:#171b21;color:#fff;border-radius:16px;border-bottom:4px solid #c60027}
+.brand-logo{display:block;flex:none;object-fit:contain;background:#fff;border-radius:10px}
+.brand-header h1{margin:0;font-size:clamp(30px,8vw,46px);font-weight:900;letter-spacing:.04em;line-height:1.1}
+.brand-subtitle{margin:5px 0 0;color:#e4e4e7;font-size:12px}
+.sheet input.score.negative{color:#c60027;-webkit-text-fill-color:#c60027}
+.score-reference{margin:0 0 12px}.score-reference summary{cursor:pointer;color:#a90022;font-weight:650;padding:8px 0}.score-reference img{display:block;width:100%;height:auto;margin-top:4px;border:1px solid #e4e4e7;border-radius:8px}
+.brand-subtitle span{display:inline-block;padding:3px 6px;margin-right:4px;background:#c60027;color:white;border-radius:3px;font-size:9px;font-weight:800;letter-spacing:.1em}
+.round-card{padding:8px}.round-card h2{margin-bottom:3px}.round-card .score-reference{margin-bottom:4px}.round-card .score-reference summary{padding:2px 0}.round-card #addRound{padding:5px 8px;margin-bottom:4px!important}.round-card .sheet td,.round-card .sheet th{padding:0 1px}.round-card .sheet input.score,.round-card .sheet .skip{min-height:30px;padding:3px 0}.round-card .sheet .first{line-height:1.15}.round-card .sheet .first select{padding:2px 0}.round-card .sheet .round-delete{padding:1px 4px;margin-top:1px}.round-card #warnings:empty{display:none}
+</style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header><p class="hint" id="publicStatus" role="status">読み込み中…</p><div id="statsPage"><section class="card"><h2>通算成績</h2><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><label>ルール <select id="ratingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><p class="hint">全期間の現在R。20半荘未満は暫定です。名前をタップすると選択期間の推移を表示します。</p><table id="ratingTable" class="history-table"></table><div id="ratingTrend"></div></div><div id="totalsPanel" style="overflow-x:auto"><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
 const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
 async function cloudRequest(path,{token,method='GET',data}={}){
   const headers={apikey:cloudKey};
@@ -40,152 +47,317 @@ async function cloudRequest(path,{token,method='GET',data}={}){
   return response.json();
 }
 
-let lastResultsUpdate;
-let loadingResults=false;
-async function loadResults(){
-  if(loadingResults)return;
-  loadingResults=true;
-  const status=document.getElementById('status');
-  const table=document.getElementById('results');
-  try{
-    const cloud=await cloudRequest('/rest/v1/takechao_public_results?id=eq.1&select=results,updated_at');
-    const response=cloud.length?null:await fetch('./public-results.json',{cache:'no-store'});
-    if(response?.status===404){
-      status.textContent='成績はまだ公開されていません。';
-      return;
-    }
-    if(response&&!response.ok)throw Error();
-    const {updatedAt,rows}=cloud.length?{updatedAt:cloud[0].updated_at,rows:cloud[0].results}:await response.json();
-    if(lastResultsUpdate===updatedAt&&!table.hidden)return;
-    const date=new Date(updatedAt);
-    if(!Array.isArray(rows))throw Error();
-    const details=rows.find(row=>row?.kind==='details-v1');
-    const standings=rows.filter(row=>row!==details);
-    if(!Number.isFinite(date.getTime())||!Array.isArray(rows)||standings.some(row=>!row||typeof row.name!=='string'||![row.sets,row.rounds,row.pt].every(Number.isFinite)))throw Error();
-    const format=new Intl.NumberFormat('ja-JP');
-    table.tBodies[0].replaceChildren();
-    for(const player of standings){
-      const {name,sets,rounds,pt,ranks}=player;
-      const row=table.tBodies[0].insertRow();
-      const ranked=ranks?.reduce((sum,n)=>sum+n,0);
-      const link=document.createElement('button');
-      link.type='button';link.className='player-link';link.textContent=name;
-      link.onclick=()=>openPublicPlayer(player,details?.history||[]);
-      row.insertCell().append(link);
-      for(const text of [format.format(sets),format.format(rounds),format.format(pt),...(ranks||['—','—','—','—']),ranked?((ranks[0]+ranks[1])*100/ranked).toFixed(1)+'%':'—'])row.insertCell().textContent=text;
-    }
-    status.textContent='集計日時 '+new Intl.DateTimeFormat('ja-JP',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tokyo'}).format(date);
-    table.hidden=false;
-    renderPublicDetails(details);
-    lastResultsUpdate=updatedAt;
-  }catch{
-    if(table.hidden)status.textContent='成績を読み込めませんでした。時間をおいて再読み込みしてください。';
-  }finally{loadingResults=false}
-}
-function publicTable(headers,rows){
-  const wrapper=document.createElement('div');
-  wrapper.className='scroll';
-  const table=document.createElement('table');
-  wrapper.append(table);
-  const head=table.createTHead().insertRow();
-  for(const label of headers){
-    const cell=document.createElement('th');
-    cell.scope='col';cell.textContent=label;head.append(cell);
-  }
-  const body=table.createTBody();
-  for(const values of rows){
-    const row=body.insertRow();
-    for(const value of values){
-      const cell=row.insertCell();cell.textContent=value;
-      if(typeof value==='number'&&value<0)cell.className='negative';
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const value=v=>v===''||v==='skip'?0:Number(v)||0;
+const fmt=n=>(n>0?'+':'')+n.toLocaleString('ja-JP');
+const master=[],editing=null,state={players:[],rounds:[]};
+let published=[];
+const historyEntries=()=>published.map((set,index)=>({set,index}));
+function setResults(set,mode='all'){
+  const results=set.players.map(p=>({
+    id:p.masterId||master.find(m=>m.name===p.name)?.id||'name:'+p.name,name:master.find(m=>m.id===p.masterId)?.name||p.name,
+    pt:0,chips:value(p.chips),rounds:0,ranks:[0,0,0,0],lasts:0
+  }));
+  for(const round of set.rounds){
+    const rule=round.mode==='north'?'north':'normal';
+    if(mode!=='all'&&mode!==rule)continue;
+    const played=[];
+    set.players.forEach((p,i)=>{
+      const score=round.scores?.[p.id];
+      if(score==null||score===''||score==='skip'||!Number.isInteger(Number(score)))return;
+      const result=results[i];
+      result.pt+=Number(score);
+      result.rounds++;
+      played.push({result,score:Number(score)});
+    });
+    if(played.length!==(round.mode==='north'?4:3))continue;
+    for(const player of played){
+      const rank=played.filter(other=>other.score>player.score).length;
+      player.result.ranks[rank]++;
+      if(rank===played.length-1)player.result.lasts++;
     }
   }
-  return wrapper;
+  return results.map(r=>({...r,yen:r.pt*Number(set.rate||0)+r.chips*Number(set.chipRate||0)}));
 }
-function openPublicPlayer(player,history){
-  const title=document.getElementById('personTitle');
-  const panel=document.getElementById('personStats');
-  const tabs=[...document.querySelectorAll('#personModes button')];
-  title.textContent=player.name+'の個人成績';
-  const render=mode=>{
-    tabs.forEach(tab=>tab.setAttribute('aria-pressed',String(tab.dataset.mode===mode)));
-    panel.replaceChildren();
-    if(mode==='all'){
-      panel.append(publicTable(['項目','成績'],[['対局数',player.rounds],['累計pt',player.pt]]));
-      return;
+function statsDateFilter(){
+  const period=$('statsPeriod').value;
+  $('statsRange').hidden=period!=='range';
+  const from=$('statsFrom').value;
+  const to=$('statsTo').value;
+  const now=new Date();
+  const month=period==='previous'?new Date(now.getFullYear(),now.getMonth()-1,1):now;
+  const prefix=period==='year'?String(now.getFullYear()):month.getFullYear()+'/'+String(month.getMonth()+1).padStart(2,'0');
+  return set=>{
+    if(period==='all')return true;
+    if(period!=='range')return set.date?.startsWith(prefix);
+    const day=set.date?.replaceAll('/','-');
+    return Boolean(day&&(!from||day>=from)&&(!to||day<=to));
+  };
+}
+function aggregateStats(sets,mode='all'){
+  const stats=new Map();
+  for(const set of sets){
+    const rules=new Set(set.rounds.filter(r=>Object.values(r.scores||{}).some(v=>v!=null&&v!==''&&v!=='skip')).map(r=>r.mode==='north'?'north':'normal'));
+    const chips=mode==='all'||(rules.size===1&&rules.has(mode));
+    for(const r of setResults(set,mode)){
+      if(mode!=='all'&&!r.rounds&&!(chips&&r.chips))continue;
+      const a=stats.get(r.id)||{id:r.id,name:r.name,pt:0,chips:0,rounds:0,yen:0,sets:0,lasts:0,ranks:[0,0,0,0]};
+      a.name=r.name;
+      a.pt+=r.pt;
+      a.chips+=chips?r.chips:0;
+      a.rounds+=r.rounds;
+      a.yen+=chips?r.yen:r.pt*Number(set.rate||0);
+      a.lasts+=r.lasts;
+      a.sets++;
+      r.ranks.forEach((count,i)=>a.ranks[i]+=count);
+      stats.set(r.id,a);
     }
-    const scores=[];
-    for(const set of [...history].reverse()){
-      const index=set.names.indexOf(player.name);
-      if(index<0)continue;
-      for(const round of set.rounds){
-        const rule=round.mode==='north'?'north':'normal';
-        if(mode!=='trend'&&rule!==mode)continue;
-        const valid=v=>v!=null&&v!==''&&v!=='skip'&&Number.isInteger(Number(v));
-        if(!valid(round.scores[index]))continue;
-        const pt=Number(round.scores[index]);
-        const played=round.scores.filter(valid).map(Number);
-        scores.push({pt,rank:played.length===(rule==='north'?4:3)?1+played.filter(v=>v>pt).length:0});
+  }
+  return [...stats.values()].sort((a,b)=>b.pt-a.pt);
+}
+function renderStats(){
+  const current=editing?.current||state;
+  const history=historyEntries();
+  const matches=statsDateFilter();
+  if(!$('ratingPanel').hidden)renderRatings(history.map(entry=>entry.set),matches);
+  const mode=$('totalsMode').value;
+  const rows=aggregateStats(history.map(entry=>entry.set).filter(matches),mode);
+  const rankCount=mode==='all'?0:mode==='north'?4:3;
+  const headings=['プレイヤー','累計ポイント','収支','通算セット数','通算半荘数','通算チップ','トップ率','ラス率',...Array.from({length:rankCount},(_,i)=>(i+1)+'着')];
+  $('statsTable').innerHTML='<thead><tr>'+headings.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>{
+    const ranked=r.ranks.reduce((sum,n)=>sum+n,0);
+    const percent=n=>ranked?(100*n/ranked).toFixed(1)+'%':'—';
+    const cells=[fmt(r.pt)+' pt',fmt(r.yen)+' pt',r.sets,r.rounds,fmt(r.chips),percent(r.ranks[0]),percent(r.lasts),...r.ranks.slice(0,rankCount)];
+    return `<tr><td><button class="player-stats-link" data-player-stats="${esc(r.id)}">${esc(r.name)}</button></td>${cells.map((v,i)=>`<td class="${i<2&&v.startsWith('-')?'negative':''}">${v}</td>`).join('')}</tr>`;
+  }).join('')+'</tbody>';
+  const reversed=$('statsPeriod').value==='range'&&$('statsFrom').value&&$('statsTo').value&&$('statsFrom').value>$('statsTo').value;
+  $('statsNote').textContent=reversed?'終了日は開始日以降にしてください。':rows.length?'通算半荘は点数を入力した回数です。着順と割合は対局人数分の点数がそろった半荘で集計します。同点は同順位です。':'まだ集計できるデータがありません。';
+  history.sort((a,b)=>(b.set.date||'').localeCompare(a.set.date||'')||Number(b.set.sequence||0)-Number(a.set.sequence||0));
+  $('historyList').innerHTML=history.map(({set,index})=>{
+    const results=setResults(set);
+    const label="",edit="",remove="";
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
+  }).join('');
+}
+function calculateRatings(sets,mode){
+  const players=new Map();
+  const required=mode==='north'?4:3;
+  const ordered=[...sets].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||Number(a.sequence||0)-Number(b.sequence||0));
+  for(const set of ordered){
+    for(const round of set.rounds){
+      if((round.mode==='north'?'north':'normal')!==mode)continue;
+      const played=[];
+      for(const player of set.players){
+        const score=round.scores?.[player.id];
+        if(score==null||score===''||score==='skip'||!Number.isInteger(Number(score)))continue;
+        const match=master.find(m=>m.id===player.masterId)||master.find(m=>m.name===player.name);
+        played.push({id:player.masterId||match?.id||'name:'+player.name,name:match?.name||player.name,score:Number(score)});
+      }
+      if(played.length!==required||new Set(played.map(p=>p.id)).size!==required||played.reduce((sum,p)=>sum+p.score,0)!==0)continue;
+      const table=played.map(p=>({...p,before:players.get(p.id)?.rating??1500}));
+      for(const player of table){
+        let change=0;
+        for(const opponent of table){
+          if(opponent.id===player.id)continue;
+          const actual=player.score===opponent.score?0.5:Number(player.score>opponent.score);
+          const expected=1/(1+10**((opponent.before-player.before)/400));
+          change+=24*(actual-expected)/(required-1);
+        }
+        const entry=players.get(player.id)||{id:player.id,history:[]};
+        entry.name=player.name;
+        entry.rating=player.before+change;
+        entry.change=Math.round(entry.rating)-Math.round(player.before);
+        entry.history.push({date:set.date,rating:entry.rating,before:player.before});
+        players.set(player.id,entry);
       }
     }
-    if(!scores.length){panel.textContent='対象の半荘データがありません。';return}
-    const total=scores.reduce((sum,row)=>sum+row.pt,0);
-    if(mode==='trend'){
-      const points=[0];
-      for(const row of scores)points.push(points.at(-1)+row.pt);
-      const min=points.reduce((a,b)=>Math.min(a,b),0),max=points.reduce((a,b)=>Math.max(a,b),0);
-      const path=points.map((v,i)=>`${12+296*i/(points.length-1)},${max===min?55:95-80*(v-min)/(max-min)}`).join(' ');
-      panel.innerHTML=`<p>累計ptの推移（半荘ごと） ${total.toLocaleString('ja-JP')} pt</p><svg viewBox="0 0 320 108" width="100%" role="img" aria-label="累計ポイントの推移"><polyline points="${path}" fill="none" stroke="#c60027" stroke-width="2.5"/></svg>`;
-      return;
-    }
-    const ranked=scores.filter(row=>row.rank);
-    const ranks=Array.from({length:mode==='north'?4:3},(_,i)=>ranked.filter(row=>row.rank===i+1).length);
-    const percent=n=>ranked.length?(100*n/ranked.length).toFixed(1)+'%':'—';
-    panel.append(publicTable(['項目','成績'],[['対局数',scores.length],['累計pt',total],
-      ['トップ率',percent(ranks[0])],['連対率',percent(ranks[0]+ranks[1])],['ラス率',percent(ranks.at(-1))],
-      ['平均順位',ranked.length?(ranked.reduce((sum,row)=>sum+row.rank,0)/ranked.length).toFixed(2):'—'],
-      ['平均pt',(total/scores.length).toFixed(2)],['着順内訳',ranks.map((n,i)=>`${i+1}着 ${n}回`).join(' ／ ')]]));
-  };
-  tabs.forEach(tab=>tab.onclick=()=>render(tab.dataset.mode));
-  render('all');
-  document.getElementById('personDialog').showModal();
-}
-function renderPublicDetails(data){
-  const history=document.getElementById('publicHistory');
-  const rating=document.getElementById('publicRating');
-  const mode=document.getElementById('publicRatingMode');
-  const message='管理者が次に成績を公開すると表示されます。';
-  if(!data){history.textContent=rating.textContent=message;return}
-  history.textContent=data.history.length?'':'公開済みの履歴はありません。';
-  for(const set of data.history){
-    const entry=document.createElement('details');
-    const title=document.createElement('summary');
-    title.textContent=set.date+' - '+(set.sequence||1)+'｜'+set.rounds.length+'半荘';
-    entry.append(title,publicTable(['半荘','ルール',...set.names],set.rounds.map((round,i)=>[
-      i+1,round.mode==='north'?'四人三麻':'三麻',...round.scores.map(score=>score==='skip'?'抜け':score==null||score===''?'—':Number(score))
-    ])));
-    history.append(entry);
   }
-  mode.onchange=()=>{
-    const rows=data.ratings[mode.value];
-    rating.replaceChildren();
-    if(!rows.length){rating.textContent='対象の半荘はまだありません。';return}
-    rating.append(publicTable(['プレイヤー','現在R','対象半荘','直近'],rows.map(p=>[p.name,p.rating+(p.rounds<20?' 暫定':''),p.rounds,p.change])));
-  };
-  mode.onchange();
+  return [...players.values()].sort((a,b)=>b.rating-a.rating);
 }
-document.querySelectorAll('[data-panel]').forEach(button=>{
-  button.onclick=()=>{
-    document.querySelectorAll('[data-panel]').forEach(tab=>{
-      const selected=tab===button;
-      tab.setAttribute('aria-pressed',String(selected));
-      document.getElementById(tab.dataset.panel).hidden=!selected;
-    });
-  };
-});
-renderPublicDetails();
-loadResults();
-setInterval(()=>{if(!document.hidden)loadResults()},30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadResults()});
-</script>
-</html>
+let ratingPlayerId;
+function renderRatings(sets,matches){
+  const rows=calculateRatings(sets,$('ratingMode').value);
+  $('ratingTable').innerHTML='<thead><tr><th>プレイヤー</th><th>現在R</th><th>対象半荘</th><th>直近</th></tr></thead><tbody>'+rows.map(p=>
+    `<tr><td><button type="button" class="player-stats-link" data-rating-player="${esc(p.id)}">${esc(p.name)}</button></td><td><b>${Math.round(p.rating)}</b>${p.history.length<20?' <small>暫定</small>':''}</td><td>${p.history.length}</td><td>${fmt(p.change)}</td></tr>`).join('')+'</tbody>';
+  const player=rows.find(p=>p.id===ratingPlayerId);
+  const points=player?.history.filter(matches)||[];
+  const panel=$('ratingTrend');
+  panel.textContent='';
+  if(!rows.length){panel.textContent='対象の半荘はまだありません。';return}
+  if(!player)return;
+  if(!points.length){panel.textContent='選択期間に対象の半荘がありません。';return}
+  const values=[points[0].before,...points.map(p=>p.rating)];
+  const min=values.reduce((a,b)=>Math.min(a,b));
+  const max=values.reduce((a,b)=>Math.max(a,b));
+  const path=values.map((v,i)=>`${38+i*274/(values.length-1)},${max===min?56:100-(v-min)*88/(max-min)}`).join(' ');
+  panel.innerHTML=`<figure class="player-trend"><figcaption>${esc(player.name)}のR推移　${Math.round(values[0])} → ${Math.round(values.at(-1))}</figcaption><svg viewBox="0 0 324 124" role="img" aria-label="選択期間のレーティング推移"><text x="2" y="${max===min?60:15}" font-size="10">${Math.round(max)}</text>${max!==min?`<text x="2" y="104" font-size="10">${Math.round(min)}</text>`:''}<polyline points="${path}" fill="none" stroke="#c60027" stroke-width="2.5"/><text x="38" y="118" font-size="9">${esc(points[0].date)}</text>${points.length>1?`<text x="312" y="118" text-anchor="end" font-size="9">${esc(points.at(-1).date)}</text>`:''}</svg></figure>`;
+}
+function selectStatsView(rating){
+  $('ratingPanel').hidden=!rating;
+  $('totalsPanel').hidden=rating;
+  $('statsNote').hidden=rating;
+  for(const [id,active] of [['showTotals',!rating],['showRating',rating]]){
+    $(id).classList.toggle('active',active);
+    $(id).setAttribute('aria-pressed',String(active));
+  }
+  renderStats();
+}
+$('showTotals').onclick=()=>selectStatsView(false);
+$('showRating').onclick=()=>selectStatsView(true);
+$('ratingMode').onchange=renderStats;
+$('ratingTable').onclick=e=>{
+  const button=e.target.closest('[data-rating-player]');
+  if(!button)return;
+  ratingPlayerId=button.dataset.ratingPlayer;
+  renderRatings([...historyEntries().map(entry=>entry.set),editing?.current||state],statsDateFilter());
+};
+let selectedPlayerId;
+let playerStatsMode='all';
+function renderPlayerTrends(sets){
+  const series=[['ポイント','pt'],['チップ','枚'],['収支','pt']];
+  const totals=[0,0,0];
+  const points=[];
+  for(const set of sets){
+    const result=setResults(set).find(player=>player.id===selectedPlayerId);
+    if(!result||(result.rounds===0&&result.chips===0))continue;
+    [result.pt,result.chips,result.yen].forEach((n,i)=>totals[i]+=n);
+    points.push({date:set.date||'日付不明',values:[...totals]});
+  }
+  $('playerRankHint').hidden=true;
+  $('playerStatsIncomplete').hidden=true;
+  $('playerStatsChipsNote').hidden=true;
+  if(!points.length){
+    $('playerStatsResults').textContent='この期間の対局データはありません。';
+    return;
+  }
+  $('playerStatsResults').innerHTML='<p class="hint">全ルールのセットごとの累計。選択期間の開始時点を0として表示します。</p>'+series.map(([label,unit],i)=>{
+    const values=[0,...points.map(point=>point.values[i])];
+    const min=values.reduce((a,b)=>Math.min(a,b),0);
+    const max=values.reduce((a,b)=>Math.max(a,b),0);
+    const x=index=>54+index*254/(values.length-1);
+    const y=value=>max===min?51:92-(value-min)*80/(max-min);
+    const path=values.map((value,index)=>`${x(index)},${y(value)}`).join(' ');
+    const last=values.at(-1);
+    const ticks=max===min?[0]:[max,min];
+    return `<figure class="player-trend"><figcaption>${label}　${fmt(last)} ${unit}</figcaption>
+      <svg viewBox="0 0 324 116" role="img" aria-label="${label}の累計推移">
+      <line x1="54" x2="308" y1="${y(0)}" y2="${y(0)}" stroke="#b4b4ba" stroke-dasharray="3 3"/>
+      ${ticks.map(value=>`<text x="49" y="${y(value)+3}" text-anchor="end" font-size="9" fill="#555861">${fmt(value)}</text>`).join('')}
+      <polyline points="${path}" fill="none" stroke="#c60027" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="${x(values.length-1)}" cy="${y(last)}" r="3" fill="#c60027"/>
+      <text x="54" y="110" font-size="9" fill="#555861">${esc(points[0].date)}</text>
+      ${points.length>1?`<text x="308" y="110" text-anchor="end" font-size="9" fill="#555861">${esc(points.at(-1).date)}</text>`:''}
+      </svg></figure>`;
+  }).join('');
+}
+function renderPlayerStats(){
+  const current=editing?.current||state;
+  const matches=statsDateFilter();
+  const mode=playerStatsMode;
+  const sets=[...historyEntries().map(entry=>entry.set),current].filter(matches);
+  if(mode==='trend'){
+    sets.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||Number(a.sequence||0)-Number(b.sequence||0));
+    renderPlayerTrends(sets);
+    return;
+  }
+  const totals={rounds:0,pt:0,chips:0,yen:0,lasts:0,ranks:[0,0,0,0]};
+  let hasMixedChips=false;
+  for(const set of sets){
+    const playedRules=new Set(set.rounds
+      .filter(round=>Object.values(round.scores||{}).some(score=>score!=null&&score!==''&&score!=='skip'))
+      .map(round=>round.mode==='north'?'north':'normal'));
+    const includeChips=mode==='all'||(playedRules.size===1&&playedRules.has(mode));
+    for(const result of setResults(set,mode)){
+      if(result.id!==selectedPlayerId)continue;
+      if(includeChips)totals.chips+=result.chips;
+      totals.yen+=includeChips?result.yen:result.pt*Number(set.rate||0);
+      if(!includeChips&&playedRules.size>1&&playedRules.has(mode)&&result.chips!==0)hasMixedChips=true;
+      totals.rounds+=result.rounds;
+      totals.pt+=result.pt;
+      totals.lasts+=result.lasts;
+      result.ranks.forEach((count,i)=>totals.ranks[i]+=count);
+    }
+  }
+  const ranked=totals.ranks.reduce((sum,count)=>sum+count,0);
+  const incomplete=totals.rounds-ranked;
+  $('playerStatsIncomplete').hidden=mode==='all'||incomplete===0;
+  $('playerRankHint').hidden=mode==='all';
+  $('playerStatsIncomplete').textContent=`点数がそろっていない ${incomplete} 半荘は着順の集計から除外しています。`;
+  $('playerStatsChipsNote').hidden=!hasMixedChips;
+  const percent=count=>ranked?(count*100/ranked).toFixed(1)+'%':'—';
+  const averageRank=ranked?(totals.ranks.reduce((sum,count,i)=>sum+count*(i+1),0)/ranked).toFixed(2):'—';
+  const averagePt=totals.rounds?(totals.pt/totals.rounds).toFixed(2)+' pt':'—';
+  const metrics=[
+    ['対局数',totals.rounds],
+    ['累計pt',fmt(totals.pt)+' pt'],
+    ['累計チップ',fmt(totals.chips)+' 枚'],
+    ['累計収支',fmt(totals.yen)+' pt']
+  ];
+  if(mode!=='all')metrics.push(
+    ['トップ率',percent(totals.ranks[0])],['連対率',percent(totals.ranks[0]+totals.ranks[1])],
+    ['ラス率',percent(totals.lasts)],['平均順位',averageRank],['平均pt',averagePt],
+    ['着順内訳',totals.ranks.slice(0,mode==='normal'?3:4).map((n,i)=>`${i+1}着 ${n}回`).join(' ／ ')]
+  );
+  $('playerStatsResults').innerHTML='<table class="history-table"><tbody>'+metrics.map(([label,result])=>
+    `<tr><th scope="row">${label}</th><td>${result}</td></tr>`).join('')+'</tbody></table>';
+}
+$('statsTable').onclick=e=>{
+  const button=e.target.closest('[data-player-stats]');
+  if(!button)return;
+  selectedPlayerId=button.dataset.playerStats;
+  $('playerStatsTitle').textContent=button.textContent+'の個人成績';
+  const period=$('statsPeriod');
+  const range=period.value==='range'?`（${$('statsFrom').value||'指定なし'} ～ ${$('statsTo').value||'指定なし'}）`:'';
+  $('playerStatsPeriod').textContent='集計期間 '+period.selectedOptions[0].textContent+range;
+  selectPlayerStatsTab('all');
+  $('playerStatsDialog').showModal();
+};
+function selectPlayerStatsTab(mode){
+  playerStatsMode=mode;
+  for(const tab of $('playerStatsTabs').querySelectorAll('[role="tab"]')){
+    const selected=tab.dataset.mode===mode;
+    tab.classList.toggle('active',selected);
+    tab.setAttribute('aria-selected',String(selected));
+    tab.tabIndex=selected?0:-1;
+    if(selected)$('playerStatsResults').setAttribute('aria-labelledby',tab.id);
+  }
+  renderPlayerStats();
+}
+$('playerStatsTabs').onclick=e=>{
+  const tab=e.target.closest('[role="tab"]');
+  if(tab)selectPlayerStatsTab(tab.dataset.mode);
+};
+$('playerStatsTabs').onkeydown=e=>{
+  const tabs=[...$('playerStatsTabs').querySelectorAll('[role="tab"]')];
+  const index=tabs.indexOf(e.target);
+  const target={ArrowLeft:(index+tabs.length-1)%tabs.length,ArrowRight:(index+1)%tabs.length,Home:0,End:tabs.length-1}[e.key];
+  if(index<0||target===undefined)return;
+  e.preventDefault();
+  selectPlayerStatsTab(tabs[target].dataset.mode);
+  tabs[target].focus();
+};
+$('statsFrom').onchange=$('statsTo').onchange=renderStats;
+
+$('statsPeriod').onchange=$('totalsMode').onchange=renderStats;
+let revision,loading=false;
+async function refresh(){
+  if(loading)return;
+  loading=true;
+  try{
+    const [snapshot]=await cloudRequest('/rest/v1/takechao_public_results?id=eq.1&select=results,updated_at');
+    if(snapshot&&snapshot.updated_at===revision)return;
+    const payload=snapshot?.results?.find(row=>row?.kind==='sets-v2');
+    if(!payload){$('publicStatus').textContent='詳細成績は管理画面の次の自動同期後に表示されます。';return}
+    published=payload.sets;
+    renderStats();
+    revision=snapshot.updated_at;
+    $('publicStatus').textContent='閲覧専用｜保存済みセット・更新 '+new Date(revision).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'});
+  }catch{$('publicStatus').textContent='成績を読み込めませんでした。'}
+  finally{loading=false}
+}
+refresh();
+setInterval(()=>{if(!document.hidden)refresh()},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+</script></body></html>
