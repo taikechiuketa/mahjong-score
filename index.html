@@ -40,7 +40,7 @@
 <section class="card round-card"><h2>半荘スコア一覧</h2><details class="score-reference"><summary>公式点数表（3人打ち）</summary><p><a href="./rules.html">公式ルールブックを見る</a></p><a href="./takechao-score-table.png" target="_blank" rel="noopener"><img src="./takechao-score-table.png" alt="たけちゃお公式 3人打ち点数表。黒字はロン、赤字はツモ。" loading="lazy"></a></details><button id="addRound" style="margin-bottom:8px">＋ 半荘を追加</button><div class="sheet-wrap"><table class="sheet" id="sheet"></table></div><div class="row" style="margin-top:12px"><button class="secondary" id="addPlayer">＋ マスターから追加</button><span class="hint">途中参加もここから追加</span></div><p class="warn" id="warnings"></p></section>
 <section class="card"><h2>チップ・最終精算</h2><p class="hint">チップはセットの最後に増減枚数を入力。精算額＝累計pt×ポイントレート＋チップ枚数×チップレート。</p><div style="overflow:auto"><table class="settle" id="settle"></table></div><p class="warn" id="chipWarning"></p></section>
 <section class="card"><div class="row"><div><h2>データ管理</h2><p class="hint">現在のセットをJSONファイルに書き出し、バックアップや別のブラウザへの移行に使えます。読み込むと現在のセットが置き換わります。プレイヤーマスターとセット履歴は対象外です。</p></div><div class="buttons"><button class="secondary" id="export">JSON保存</button><button class="secondary" id="import">JSON読込</button><input class="hidden" type="file" id="file" accept="application/json,.json"></div></div></section>
-</div><div id="statsPage" hidden><section class="card"><h2>通算成績</h2><details class="score-reference"><summary>DB同期（管理者用）</summary><form id="cloudLogin"><label>メール <input id="cloudEmail" type="email" autocomplete="username" required></label><label>パスワード <input id="cloudPassword" type="password" autocomplete="current-password" required></label><button type="submit">ログイン</button></form><div class="buttons"><button id="cloudSave" type="button" hidden>DBに保存して公開</button><button id="cloudLogout" type="button" class="secondary" hidden>同期を停止・ログアウト</button><button id="cloudRestore" type="button" class="secondary" hidden>DBから読み込む</button></div><p id="cloudStatus" class="hint" role="status">ログイン後、初回は手動で同期を開始します。</p></details><div class="buttons"><button type="button" class="secondary" id="exportPublicStats">公開用の成績を書き出す</button><a href="./results.html">閲覧専用ページ</a></div><p class="hint">保存済みのセットと現在のセットを集計し、チップとレートを反映した総合ポイントの高い順に表示します。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><label>ルール <select id="ratingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><p class="hint">全期間の現在R。20半荘未満は暫定です。名前をタップすると選択期間の推移を表示します。</p><table id="ratingTable" class="history-table"></table><div id="ratingTrend"></div></div><div id="totalsPanel" style="overflow-x:auto"><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><button class="secondary" id="importHistory">雀簿データを追加</button><div id="historyList"></div></section></div></main><dialog id="masterDialog"><h2 id="masterHeading">プレイヤーを追加</h2><div class="master-list" id="masterList"></div><div class="row" style="margin-top:12px"><input id="newMasterName" placeholder="新しいプレイヤー名" style="flex:1;width:160px"><button id="createMaster">＋ 登録</button></div><div class="modal-actions"><button class="secondary" id="closeMaster">閉じる</button><button id="applyMaster">選択した人を追加</button></div></dialog><dialog id="importHistoryDialog"><h2>雀簿データを追加</h2><label for="historyText">共有ページからコピーした文字、または移行用JSON</label><textarea id="historyText" rows="8" style="width:100%;margin-top:8px"></textarea><div class="modal-actions"><button class="secondary" id="closeHistoryImport">閉じる</button><button id="previewHistoryImport">内容を確認</button></div></dialog><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>
+</div><div id="statsPage" hidden><section class="card"><h2>通算成績</h2><details class="score-reference"><summary>DB同期（管理者用）</summary><form id="cloudLogin"><label>メール <input id="cloudEmail" type="email" autocomplete="username" required></label><label>パスワード <input id="cloudPassword" type="password" autocomplete="current-password" required></label><button type="submit">ログイン</button></form><div class="buttons"><button id="cloudSave" type="button" hidden>同期を再試行</button><button id="cloudLogout" type="button" class="secondary" hidden>同期を停止・ログアウト</button><button id="cloudRestore" type="button" class="secondary" hidden>DBから読み込む</button></div><p id="cloudStatus" class="hint" role="status">ログインすると、保存した成績を閲覧ページに自動で反映します。</p></details><div class="buttons"><button type="button" class="secondary" id="exportPublicStats">公開用の成績を書き出す</button><a href="./results.html">閲覧専用ページ</a></div><p class="hint">保存済みのセットと現在のセットを集計し、チップとレートを反映した総合ポイントの高い順に表示します。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><label>ルール <select id="ratingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><p class="hint">全期間の現在R。20半荘未満は暫定です。名前をタップすると選択期間の推移を表示します。</p><table id="ratingTable" class="history-table"></table><div id="ratingTrend"></div></div><div id="totalsPanel" style="overflow-x:auto"><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><button class="secondary" id="importHistory">雀簿データを追加</button><div id="historyList"></div></section></div></main><dialog id="masterDialog"><h2 id="masterHeading">プレイヤーを追加</h2><div class="master-list" id="masterList"></div><div class="row" style="margin-top:12px"><input id="newMasterName" placeholder="新しいプレイヤー名" style="flex:1;width:160px"><button id="createMaster">＋ 登録</button></div><div class="modal-actions"><button class="secondary" id="closeMaster">閉じる</button><button id="applyMaster">選択した人を追加</button></div></dialog><dialog id="importHistoryDialog"><h2>雀簿データを追加</h2><label for="historyText">共有ページからコピーした文字、または移行用JSON</label><textarea id="historyText" rows="8" style="width:100%;margin-top:8px"></textarea><div class="modal-actions"><button class="secondary" id="closeHistoryImport">閉じる</button><button id="previewHistoryImport">内容を確認</button></div></dialog><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>
 const MASTER_KEY='mahjong-player-master-v1';let master=[];try{master=JSON.parse(localStorage.getItem(MASTER_KEY))||[]}catch{};if(!Array.isArray(master))master=[];const saveMaster=()=>localStorage.setItem(MASTER_KEY,JSON.stringify(master));const KEY='mahjong-sheet-v2';const ARCHIVE_KEY='mahjong-sheet-archive-v1';const today=()=>{const d=new Date();return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`};const archives=()=>{try{return JSON.parse(localStorage.getItem(ARCHIVE_KEY))||[]}catch{return []}};const nextSequence=()=>{const d=today();const used=archives().filter(x=>x.date===d).map(x=>Number(x.sequence)||0);return Math.max(0,...used)+1};const modes=[['normal','三麻'],['north','四人三麻']];const fresh=()=>({date:today(),sequence:nextSequence(),rate:100,chipRate:100,players:[{id:'p1',name:'たけち',chips:''},{id:'p2',name:'Aさん',chips:''},{id:'p3',name:'Bさん',chips:''}],rounds:[{id:'r1',mode:'normal',scores:{p1:'',p2:'',p3:''}}]});let editing=null;let state;try{state=JSON.parse(localStorage.getItem(KEY))||fresh()}catch{state=fresh()}if(!state.players||!state.rounds)state=fresh();if(!state.date){state.date=today();state.sequence=nextSequence()}if(!state.sequence)state.sequence=1;for(const r of state.rounds){if(r.mode==='half')r.mode='normal'}for(const p of state.players){let m=master.find(x=>x.id===p.masterId);if(!m){m=master.find(x=>x.name===p.name);if(!m){m={id:'m'+Date.now()+Math.random().toString(36).slice(2,7),name:p.name};master.push(m)}p.masterId=m.id}}saveMaster();const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fmt=n=>(n>0?'+':'')+n.toLocaleString('ja-JP');const value=v=>v===''||v==='skip'?0:Number(v)||0;const save=()=>{if(editing)return;try{localStorage.setItem(KEY,JSON.stringify(state))}catch{alert('保存できませんでした。ブラウザの設定をご確認ください。')}};const uid=()=>String(Date.now())+Math.random().toString(36).slice(2,7);function totals(){return Object.fromEntries(state.players.map(p=>[p.id,state.rounds.reduce((s,r)=>s+value(r.scores[p.id]),0)]))}function render(){ $('setNumber').textContent=`伝票番号 ${state.date} - ${state.sequence}${editing?'（履歴を編集中）':''}`;$('rate').value=state.rate;$('chipRate').value=state.chipRate;renderSheet();renderSettle()}
 function autoComplete(r){
   r.autoIds=r.autoIds||[];
@@ -650,13 +650,15 @@ $('cloudLogin').onsubmit=async event=>{
     const auth=await cloudRequest('/auth/v1/token?grant_type=password',{method:'POST',data:{email:$('cloudEmail').value,password:$('cloudPassword').value}});
     acceptCloudAuth(auth);
     const saved=await cloudSnapshot();
-    cloudRevision=saved?.updated_at;
-    cloudReady=false;
+    const previous=JSON.parse(localStorage.getItem(cloudSessionKey));
+    cloudRevision=previous?.revision;
+    cloudReady=!saved||saved.updated_at===cloudRevision;
+    if(!saved)cloudRevision=undefined;
     rememberCloud();
     $('cloudLogout').hidden=false;
     $('cloudRestore').hidden=!saved;
-    $('cloudSave').hidden=false;
-    cloudStatus(saved?'DBに保存済みのデータがあります。読み込みか、この端末のデータで更新するか選んでください。':'DBは空です。「DBに保存して公開」で初回移行できます。');
+    $('cloudSave').hidden=true;
+    if(!cloudReady)cloudStatus('DBに保存済みのデータがあります。「DBから読み込む」で同期を開始してください。');
   }catch{
     cloudToken=undefined;
     cloudReady=false;
@@ -667,6 +669,7 @@ $('cloudLogin').onsubmit=async event=>{
     $('cloudPassword').value='';
     cloudBusy=false;
   }
+  if(cloudReady)syncCloud();
 };
 async function syncCloud(){
   if(!cloudToken||!cloudReady)return;
@@ -703,17 +706,18 @@ async function syncCloud(){
       const updated=await cloudRequest(publicPath+'?id=eq.1',{token:cloudToken,method:'PATCH',data:payload});
       if(!updated.length)await cloudRequest(publicPath,{token:cloudToken,method:'POST',data:payload});
       rememberCloud();
+      $('cloudSave').hidden=true;
       cloudStatus('DBに保存し、閲覧用の成績を更新しました。');
     }
   }catch(error){
     cloudReady=false;
     cloudPending=false;
-    cloudStatus(error.message==='conflict'?'別の端末でDBが更新されました。再ログインして確認してください。':'同期に失敗しました。端末のデータは残っています。再ログインしてから保存し直してください。');
+    $('cloudSave').hidden=error.message==='conflict';
+    cloudStatus(error.message==='conflict'?'別の端末でDBが更新されました。再ログインして確認してください。':'同期に失敗しました。端末のデータは残っています。「同期を再試行」か再ログインをお試しください。');
   }finally{cloudBusy=false}
 }
 $('cloudSave').onclick=()=>{
   if(cloudBusy||!cloudToken)return;
-  if(!cloudReady&&!confirm('この端末のデータをDBに保存し、保存済みセットの名前・半荘別の点数・通算成績・レーティングを公開しますか？'))return;
   cloudReady=true;
   syncCloud();
 };
@@ -760,18 +764,18 @@ async function resumeCloud(){
     await renewCloud();
     const saved=await cloudSnapshot();
     const sameRevision=saved?.updated_at===session.revision;
-    cloudReady=Boolean(session.ready&&sameRevision);
+    cloudReady=sameRevision;
     // Keep the last known revision when another device updated the data.
     rememberCloud();
     $('cloudLogout').hidden=false;
-    $('cloudSave').hidden=!sameRevision;
+    $('cloudSave').hidden=true;
     $('cloudRestore').hidden=!saved;
-    cloudStatus(cloudReady?'DB同期中。セット保存時に公開成績も更新します。':sameRevision?'「DBに保存して公開」で同期を開始できます。':'DBに新しいデータがあります。「DBから読み込む」で同期を再開してください。');
+    cloudStatus(cloudReady?'自動同期を再開しています…':'DBに新しいデータがあります。「DBから読み込む」で同期を再開してください。');
   }catch{
     cloudToken=undefined;
     cloudStatus('DB同期を再開できませんでした。再ログインしてください。');
   }finally{cloudBusy=false}
-  // Publishing new fields requires an explicit save from the editor.
+  if(cloudReady)syncCloud();
 }
 resumeCloud();
 </script></body></html>
