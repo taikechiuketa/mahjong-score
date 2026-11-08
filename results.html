@@ -190,7 +190,7 @@ function renderStats(){
   $('historyList').innerHTML=history.map(({set,index})=>{
     const results=setResults(set);
     const label="",edit="",remove="";
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary><p class="hint">ルール ${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"—"}</p><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
   }).join('');
 }
 function calculateRatings(sets,mode){
