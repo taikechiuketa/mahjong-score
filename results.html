@@ -23,17 +23,32 @@ table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px 4px;b
 </section>
 </main>
 <script>
+const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
+const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
+async function cloudRequest(path,{token,method='GET',data}={}){
+  const headers={apikey:cloudKey};
+  if(token)headers.Authorization='Bearer '+token;
+  if(data!==undefined){
+    headers['Content-Type']='application/json';
+    headers.Prefer='return=representation';
+  }
+  const response=await fetch(cloudUrl+path,{method,headers,cache:'no-store',body:data===undefined?undefined:JSON.stringify(data)});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  return response.json();
+}
+
 async function loadResults(){
   const status=document.getElementById('status');
   const table=document.getElementById('results');
   try{
-    const response=await fetch('./public-results.json',{cache:'no-store'});
-    if(response.status===404){
+    const cloud=await cloudRequest('/rest/v1/takechao_public_results?id=eq.1&select=results,updated_at');
+    const response=cloud.length?null:await fetch('./public-results.json',{cache:'no-store'});
+    if(response?.status===404){
       status.textContent='成績はまだ公開されていません。';
       return;
     }
-    if(!response.ok)throw Error();
-    const {updatedAt,rows}=await response.json();
+    if(response&&!response.ok)throw Error();
+    const {updatedAt,rows}=cloud.length?{updatedAt:cloud[0].updated_at,rows:cloud[0].results}:await response.json();
     const date=new Date(updatedAt);
     if(!Number.isFinite(date.getTime())||!Array.isArray(rows)||rows.some(row=>!row||typeof row.name!=='string'||![row.sets,row.rounds,row.pt].every(Number.isFinite)))throw Error();
     const format=new Intl.NumberFormat('ja-JP');
