@@ -179,12 +179,42 @@ $('saveSet').onclick=()=>{
   if(archiveCurrent())$('saveStatus').textContent='セット履歴に保存しました。';
 };
 
+function parseJanboText(raw){
+  const lines=raw.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+  const date=raw.match(/対局日\s*(\d{4}\/\d{2}\/\d{2})/)?.[1];
+  const rate=Number(raw.match(/^レート\s*(\d+(?:\.\d+)?)\s*P\/千点/m)?.[1]);
+  const chipRate=Number(raw.match(/^チップレート\s*(\d+(?:\.\d+)?)\s*P\/枚/m)?.[1]);
+  const start=lines.indexOf('局',lines.indexOf('スコア')+1);
+  const first=lines.indexOf('1',start+1);
+  const total=lines.indexOf('合計',first+1);
+  const chip=lines.indexOf('チップ',total+1);
+  const balance=lines.indexOf('収支',chip+1);
+  if(start<0||first<0||total<0||chip<0||balance<0)throw Error();
+  const names=lines.slice(start+1,first).filter(line=>line!=='face'&&line!=='person');
+  const count=names.length;
+  if(![3,4].includes(count)||chip-total!==count+1||balance-chip!==count+1)throw Error();
+  const readNumbers=values=>{
+    if(values.length!==count||values.some(value=>!/^[-+−]?\d+$/.test(value)))throw Error();
+    return values.map(value=>Number(value.replace('−','-')));
+  };
+  const scores=[];
+  for(let i=first;i<total;i+=count+1){
+    if(lines[i]!==String(scores.length+1)||i+count>=total)throw Error();
+    scores.push(readNumbers(lines.slice(i+1,i+count+1)));
+  }
+  const totals=readNumbers(lines.slice(total+1,chip));
+  const chips=readNumbers(lines.slice(chip+1,balance));
+  const balances=readNumbers(lines.slice(balance+1,balance+count+1));
+  if(totals.some((points,i)=>points!==scores.reduce((sum,row)=>sum+row[i],0)||
+    Math.abs(points*rate+chips[i]*chipRate-balances[i])>0.000001))throw Error();
+  return {date,names,scores,chips,rate,chipRate,mode:count===4?'north':'normal'};
+}
 $('importHistory').onclick=()=>{
-  const raw=prompt('雀簿の移行用JSONを貼り付けてください。');
+  const raw=prompt('雀簿の共有ページからコピーした文字、または移行用JSONを貼り付けてください。');
   if(!raw)return;
   let data;
   try{
-    data=JSON.parse(raw);
+    data=raw.trimStart().startsWith('{')?JSON.parse(raw):parseJanboText(raw);
     const {date,names,scores,chips,rate,chipRate,mode}=data;
     const count=mode==='north'?4:3;
     if(!['normal','north'].includes(mode)||!/^\d{4}\/\d{2}\/\d{2}$/.test(date)||
@@ -194,7 +224,7 @@ $('importHistory').onclick=()=>{
       !Array.isArray(chips)||chips.length!==count||!chips.every(Number.isSafeInteger)||chips.reduce((sum,n)=>sum+n,0)!==0||
       ![rate,chipRate].every(n=>Number.isFinite(n)&&n>=0))throw Error();
   }catch{
-    alert('移行用JSONの形式、点数またはチップの合計をご確認ください。');
+    alert('取り込めませんでした。対局日、レート、スコア表、チップ、収支までコピーできているか確認してください。');
     return;
   }
   const {date,names,scores,chips,rate,chipRate,mode}=data;
@@ -208,7 +238,7 @@ $('importHistory').onclick=()=>{
     const points=scores.reduce((sum,row)=>sum+row[i],0);
     return `${name}：${fmt(points)} pt、チップ ${fmt(chips[i])} 枚、収支 ${fmt(points*rate+chips[i]*chipRate)}`;
   }).join('\n');
-  if(!confirm(`${date}・${mode==='north'?'四人三麻':'三麻'}・${scores.length}半荘\n\n${summary}\n\nセット履歴に追加しますか？`))return;
+  if(!confirm(`${date}・${mode==='north'?'四人三麻':'三麻'}・${scores.length}半荘\n\n${summary}\n\n表示されたルールと収支を確認して、セット履歴に追加しますか？`))return;
   const current=editing?.current||state;
   const sequence=Math.max(0,...[...history,current].filter(set=>set?.date===date).map(set=>Number(set.sequence)||0))+1;
   const players=names.map((name,i)=>({id:uid(),name,chips:chips[i],masterId:master.find(player=>player.name===name)?.id}));
