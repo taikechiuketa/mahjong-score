@@ -373,7 +373,7 @@ function setResults(set,mode='all'){
       const result=results[i];
       result.pt+=Number(score);
       result.rounds++;
-      played.push({result,score:Number(score),rankingVisible:rankingVisible(player)});
+      played.push({result,score:Number(score)});
     });
     if(played.length!==(roundSize(round.mode)))continue;
     for(const player of played){
@@ -547,7 +547,7 @@ function calculateRatings(sets,mode){
         const score=round.scores?.[player.id];
         if(score==null||score===''||score==='skip'||!Number.isInteger(Number(score)))continue;
         const match=master.find(m=>m.id===player.masterId)||master.find(m=>m.name===player.name);
-        played.push({id:player.masterId||match?.id||'name:'+player.name,name:match?.name||player.name,score:Number(score)});
+        played.push({id:player.masterId||match?.id||'name:'+player.name,name:match?.name||player.name,score:Number(score),rankingVisible:rankingVisible(player)});
       }
       if(played.length!==required||new Set(played.map(p=>p.id)).size!==required||played.reduce((sum,p)=>sum+p.score,0)!==0)continue;
       const table=played.map(p=>({...p,before:players.get(p.id)?.rating??1500}));
