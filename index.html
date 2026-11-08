@@ -19,6 +19,8 @@
 .sheet tr.score-warning td{background:#ffe6e3;color:#932c23}
 .sheet tr.score-warning input.score,.settle.chip-warning input[data-chip]{background:#fff1ef;border-color:#ce6b60}
 #statsTable .player-stats-link{background:transparent;color:#176b4d;padding:4px 0;min-height:44px;font:inherit;font-weight:600;text-align:left;white-space:nowrap;text-decoration:underline;text-underline-offset:3px}
+#playerStatsDialog{height:min(680px,calc(100vh - 24px));height:min(680px,calc(100dvh - 24px));max-height:none;overflow-y:auto}
+#playerStatsTabs button{flex:1 1 0;min-width:0}
 </style></head><body><main><div class="row"><div><h1>🀄 セット麻雀 スコアシート</h1><div class="sub">半荘ごとに入力・自動保存</div></div><span class="pill">ローカル保存</span></div>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイントレート（円/pt）<input id="rate" type="number" min="0" step="1"></label><label>チップレート（円/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
 <section class="card"><div class="row"><h2>プレイヤーマスター</h2><button class="secondary" id="manageMaster">登録・編集</button></div><p class="hint">一度登録した仲間を次回以降のセットでも選べます。名前の変更は過去のセット記録には影響しません。</p></section>
