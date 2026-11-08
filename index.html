@@ -29,6 +29,7 @@
 .brand-logo{display:block;flex:none;object-fit:contain;background:#fff;border-radius:10px}
 .brand-header h1{margin:0;font-size:clamp(18px,5.2vw,26px);line-height:1.25}
 .brand-subtitle{margin:5px 0 0;color:#e4e4e7;font-size:12px}
+.sheet input.score.negative{color:#c60027;-webkit-text-fill-color:#c60027}
 </style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけちゃお成績管理</h1><p class="brand-subtitle">セット麻雀スコアシート</p></div></header>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイントレート（円/pt）<input id="rate" type="number" min="0" step="1"></label><label>チップレート（円/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
 <section class="card"><div class="row"><h2>プレイヤーマスター</h2><button class="secondary" id="manageMaster">登録・編集</button></div><p class="hint">一度登録した仲間を次回以降のセットでも選べます。名前の変更は過去のセット記録には影響しません。</p></section>
@@ -94,6 +95,10 @@ function renderScoreWarnings(){
   const marked=new Set(issues.map(issue=>issue.index));
   $('sheet').querySelectorAll('tr[data-round-index]').forEach(row=>{
     row.classList.toggle('score-warning',marked.has(Number(row.dataset.roundIndex)));
+  });
+  $('sheet').querySelectorAll('input[data-score]').forEach(input=>{
+    const round=state.rounds[Number(input.closest('tr').dataset.roundIndex)];
+    input.classList.toggle('negative',value(round.scores[input.dataset.player])<0);
   });
   $('warnings').textContent=issues.map(issue=>issue.message).join(' / ');
 }
