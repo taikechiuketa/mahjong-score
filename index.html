@@ -25,7 +25,7 @@
 <section class="card"><h2>半荘スコア一覧</h2><button id="addRound" style="margin-bottom:8px">＋ 半荘を追加</button><div class="sheet-wrap"><table class="sheet" id="sheet"></table></div><div class="row" style="margin-top:12px"><button class="secondary" id="addPlayer">＋ マスターから追加</button><span class="hint">途中参加もここから追加</span></div><p class="warn" id="warnings"></p></section>
 <section class="card"><h2>チップ・最終精算</h2><p class="hint">チップはセットの最後に増減枚数を入力。精算額＝累計pt×ポイントレート＋チップ枚数×チップレート。</p><div style="overflow:auto"><table class="settle" id="settle"></table></div><p class="warn" id="chipWarning"></p></section>
 <section class="card"><div class="row"><div><h2>データ管理</h2><p class="hint">現在のセットをJSONファイルに書き出し、バックアップや別のブラウザへの移行に使えます。読み込むと現在のセットが置き換わります。プレイヤーマスターとセット履歴は対象外です。</p></div><div class="buttons"><button class="secondary" id="export">JSON保存</button><button class="secondary" id="import">JSON読込</button><input class="hidden" type="file" id="file" accept="application/json,.json"></div></div></section>
-</div><div id="statsPage" hidden><section class="card"><h2>通算成績</h2><p class="hint">保存済みのセットと現在のセットを集計。チップとレートを含めた収支です。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div style="overflow-x:auto"><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><button class="secondary" id="importHistory">雀簿データを追加</button><div id="historyList"></div></section></div></main><dialog id="masterDialog"><h2 id="masterHeading">プレイヤーを追加</h2><div class="master-list" id="masterList"></div><div class="row" style="margin-top:12px"><input id="newMasterName" placeholder="新しいプレイヤー名" style="flex:1;width:160px"><button id="createMaster">＋ 登録</button></div><div class="modal-actions"><button class="secondary" id="closeMaster">閉じる</button><button id="applyMaster">選択した人を追加</button></div></dialog><dialog id="importHistoryDialog"><h2>雀簿データを追加</h2><label for="historyText">共有ページからコピーした文字、または移行用JSON</label><textarea id="historyText" rows="8" style="width:100%;margin-top:8px"></textarea><div class="modal-actions"><button class="secondary" id="closeHistoryImport">閉じる</button><button id="previewHistoryImport">内容を確認</button></div></dialog><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><label>ルール <select id="playerStatsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><div id="playerStatsResults"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>
+</div><div id="statsPage" hidden><section class="card"><h2>通算成績</h2><p class="hint">保存済みのセットと現在のセットを集計。チップとレートを含めた収支です。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div style="overflow-x:auto"><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><button class="secondary" id="importHistory">雀簿データを追加</button><div id="historyList"></div></section></div></main><dialog id="masterDialog"><h2 id="masterHeading">プレイヤーを追加</h2><div class="master-list" id="masterList"></div><div class="row" style="margin-top:12px"><input id="newMasterName" placeholder="新しいプレイヤー名" style="flex:1;width:160px"><button id="createMaster">＋ 登録</button></div><div class="modal-actions"><button class="secondary" id="closeMaster">閉じる</button><button id="applyMaster">選択した人を追加</button></div></dialog><dialog id="importHistoryDialog"><h2>雀簿データを追加</h2><label for="historyText">共有ページからコピーした文字、または移行用JSON</label><textarea id="historyText" rows="8" style="width:100%;margin-top:8px"></textarea><div class="modal-actions"><button class="secondary" id="closeHistoryImport">閉じる</button><button id="previewHistoryImport">内容を確認</button></div></dialog><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>
 const MASTER_KEY='mahjong-player-master-v1';let master=[];try{master=JSON.parse(localStorage.getItem(MASTER_KEY))||[]}catch{};if(!Array.isArray(master))master=[];const saveMaster=()=>localStorage.setItem(MASTER_KEY,JSON.stringify(master));const KEY='mahjong-sheet-v2';const ARCHIVE_KEY='mahjong-sheet-archive-v1';const today=()=>{const d=new Date();return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`};const archives=()=>{try{return JSON.parse(localStorage.getItem(ARCHIVE_KEY))||[]}catch{return []}};const nextSequence=()=>{const d=today();const used=archives().filter(x=>x.date===d).map(x=>Number(x.sequence)||0);return Math.max(0,...used)+1};const modes=[['normal','三麻'],['north','四人三麻']];const fresh=()=>({date:today(),sequence:nextSequence(),rate:100,chipRate:100,players:[{id:'p1',name:'たけち',chips:''},{id:'p2',name:'Aさん',chips:''},{id:'p3',name:'Bさん',chips:''}],rounds:[{id:'r1',mode:'normal',scores:{p1:'',p2:'',p3:''}}]});let editing=null;let state;try{state=JSON.parse(localStorage.getItem(KEY))||fresh()}catch{state=fresh()}if(!state.players||!state.rounds)state=fresh();if(!state.date){state.date=today();state.sequence=nextSequence()}if(!state.sequence)state.sequence=1;for(const r of state.rounds){if(r.mode==='half')r.mode='normal'}for(const p of state.players){let m=master.find(x=>x.id===p.masterId);if(!m){m=master.find(x=>x.name===p.name);if(!m){m={id:'m'+Date.now()+Math.random().toString(36).slice(2,7),name:p.name};master.push(m)}p.masterId=m.id}}saveMaster();const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const fmt=n=>(n>0?'+':'')+n.toLocaleString('ja-JP');const value=v=>v===''||v==='skip'?0:Number(v)||0;const save=()=>{if(editing)return;try{localStorage.setItem(KEY,JSON.stringify(state))}catch{alert('保存できませんでした。ブラウザの設定をご確認ください。')}};const uid=()=>String(Date.now())+Math.random().toString(36).slice(2,7);function totals(){return Object.fromEntries(state.players.map(p=>[p.id,state.rounds.reduce((s,r)=>s+value(r.scores[p.id]),0)]))}function render(){ $('setNumber').textContent=`伝票番号 ${state.date} - ${state.sequence}${editing?'（履歴を編集中）':''}`;$('rate').value=state.rate;$('chipRate').value=state.chipRate;renderSheet();renderSettle()}
 function autoComplete(r){
   r.autoIds=r.autoIds||[];
@@ -338,10 +338,11 @@ function renderStats(){
   }).join('');
 }
 let selectedPlayerId;
+let playerStatsMode='all';
 function renderPlayerStats(){
   const current=editing?.current||state;
   const matches=statsDateFilter();
-  const mode=$('playerStatsMode').value;
+  const mode=playerStatsMode;
   const totals={rounds:0,pt:0,chips:0,yen:0,lasts:0,ranks:[0,0,0,0]};
   let hasMixedChips=false;
   for(const set of [...historyEntries().map(entry=>entry.set),current].filter(matches)){
@@ -391,11 +392,33 @@ $('statsTable').onclick=e=>{
   const period=$('statsPeriod');
   const range=period.value==='range'?`（${$('statsFrom').value||'指定なし'} ～ ${$('statsTo').value||'指定なし'}）`:'';
   $('playerStatsPeriod').textContent='集計期間 '+period.selectedOptions[0].textContent+range;
-  $('playerStatsMode').value='all';
-  renderPlayerStats();
+  selectPlayerStatsTab('all');
   $('playerStatsDialog').showModal();
 };
-$('playerStatsMode').onchange=renderPlayerStats;
+function selectPlayerStatsTab(mode){
+  playerStatsMode=mode;
+  for(const tab of $('playerStatsTabs').querySelectorAll('[role="tab"]')){
+    const selected=tab.dataset.mode===mode;
+    tab.classList.toggle('active',selected);
+    tab.setAttribute('aria-selected',String(selected));
+    tab.tabIndex=selected?0:-1;
+    if(selected)$('playerStatsResults').setAttribute('aria-labelledby',tab.id);
+  }
+  renderPlayerStats();
+}
+$('playerStatsTabs').onclick=e=>{
+  const tab=e.target.closest('[role="tab"]');
+  if(tab)selectPlayerStatsTab(tab.dataset.mode);
+};
+$('playerStatsTabs').onkeydown=e=>{
+  const tabs=[...$('playerStatsTabs').querySelectorAll('[role="tab"]')];
+  const index=tabs.indexOf(e.target);
+  const target={ArrowLeft:(index+tabs.length-1)%tabs.length,ArrowRight:(index+1)%tabs.length,Home:0,End:tabs.length-1}[e.key];
+  if(index<0||target===undefined)return;
+  e.preventDefault();
+  selectPlayerStatsTab(tabs[target].dataset.mode);
+  tabs[target].focus();
+};
 $('historyList').onclick=e=>{
   const button=e.target.closest('[data-edit-history]');
   if(button)startHistoryEdit(Number(button.dataset.editHistory));
