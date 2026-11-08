@@ -217,11 +217,12 @@ function parseJanboText(raw){
   const first=lines.indexOf('1',start+1);
   const total=lines.indexOf('合計',first+1);
   const chip=lines.indexOf('チップ',total+1);
-  const balance=lines.indexOf('収支',chip+1);
-  if(start<0||first<0||total<0||chip<0||balance<0)throw Error();
+  const balance=lines.indexOf('収支',total+1);
+  const noChips=chip<0&&chipRate===0;
+  if(start<0||first<0||total<0||(!noChips&&chip<0)||balance<0)throw Error();
   const names=lines.slice(start+1,first).filter(line=>line!=='face'&&line!=='person');
   const count=names.length;
-  if(count<3||chip-total!==count+1||balance-chip!==count+1)throw Error();
+  if(count<3||(noChips?balance-total!==count+1:chip-total!==count+1||balance-chip!==count+1))throw Error();
   const readNumbers=(values,allowSkip=false)=>{
     if(values.length!==count||values.some(value=>!(allowSkip&&value==='-')&&!/^[-+−]?\d+$/.test(value)))throw Error();
     return values.map(value=>value==='-'?'skip':Number(value.replace('−','-')));
@@ -234,8 +235,8 @@ function parseJanboText(raw){
     if(sum!==0)throw new Error('第'+(scores.length+1)+'半荘の点数合計が '+fmt(sum)+' pt です。雀簿の点数を確認してください。');
     scores.push(row);
   }
-  const totals=readNumbers(lines.slice(total+1,chip));
-  const chips=readNumbers(lines.slice(chip+1,balance));
+  const totals=readNumbers(lines.slice(total+1,noChips?balance:chip));
+  const chips=noChips?Array(count).fill(0):readNumbers(lines.slice(chip+1,balance));
   const balances=readNumbers(lines.slice(balance+1,balance+count+1));
   if(totals.some((points,i)=>points!==scores.reduce((sum,row)=>sum+value(row[i]),0)||
     Math.abs(points*rate+chips[i]*chipRate-balances[i])>0.000001))throw Error();
