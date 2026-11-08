@@ -363,25 +363,24 @@ function renderStats(){
     const results=setResults(set);
     const label=index===null?(set.archiveId?'（進行中・保存済み）':'（進行中）'):'';
     const edit=index===null||editing?'':`<button class="secondary" data-edit-history="${index}">このセットを編集</button>`;
-    const rounds=index===null||editing||!set.rounds.length?'':`<details><summary>半荘一覧（${set.rounds.length}件）</summary><ol>${set.rounds.map((round,i)=>`<li><span>第${i+1}半荘（${round.mode==='north'?'四人三麻':'三麻'}）</span> <button type="button" class="danger" data-delete-history-round="${i}" data-history-index="${index}">削除</button></li>`).join('')}</ol></details>`;
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary>${edit}${rounds}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}円</td></tr>`).join('')}</tbody></table></details>`;
+    const remove=index===null||editing?'':`<button type="button" class="danger" data-delete-history-set="${index}">セットを削除</button>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}円</td></tr>`).join('')}</tbody></table></details>`;
   }).join('');
   $('historyList').onclick=e=>{
     const edit=e.target.closest('[data-edit-history]');
     if(edit)startHistoryEdit(Number(edit.dataset.editHistory));
-    const button=e.target.closest('[data-delete-history-round]');
+    const button=e.target.closest('[data-delete-history-set]');
     if(!button||editing)return;
-    const index=Number(button.dataset.historyIndex);
-    const roundIndex=Number(button.dataset.deleteHistoryRound);
+    const index=Number(button.dataset.deleteHistorySet);
     const displayed=history.find(entry=>entry.index===index)?.set;
     const saved=archives();
-    if(!displayed||!displayed.rounds[roundIndex]||JSON.stringify(saved[index])!==JSON.stringify(displayed)){
+    if(!displayed||JSON.stringify(saved[index])!==JSON.stringify(displayed)){
       alert('履歴が更新されました。開き直してから削除してください。');
       renderStats();
       return;
     }
-    if(!confirm(`${displayed.date} - ${displayed.sequence||1} の第${roundIndex+1}半荘を削除しますか？`))return;
-    saved[index].rounds.splice(roundIndex,1);
+    if(!confirm(`${displayed.date} - ${displayed.sequence||1} のセット（全${displayed.rounds.length}半荘）を削除しますか？`))return;
+    saved.splice(index,1);
     try{
       localStorage.setItem(ARCHIVE_KEY,JSON.stringify(saved));
     }catch{
