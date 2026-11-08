@@ -18,6 +18,7 @@
 .navtabs{display:flex;gap:8px;margin:14px 0}.navtabs button{flex:1;padding:12px 5px}.navtabs button:not(.active){background:#e9f0eb;color:#466254}.navtabs button.active{background:#176b4d;color:white}.history-table{width:100%;border-collapse:collapse;font-size:13px}.history-table th,.history-table td{padding:9px 5px;border-bottom:1px solid #ddd;text-align:right}.history-table th:first-child,.history-table td:first-child{text-align:left}.history-table .positive{color:#14794e}.history-table .negative{color:#b23b36}.stats-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}#statsTable th{white-space:nowrap}.stats-filter select{max-width:190px}.history-card{padding:12px 0;border-bottom:1px solid #ddd}.history-card summary{cursor:pointer;font-weight:650}.history-card table{width:100%;margin-top:8px;font-size:13px}
 .sheet tr.score-warning td{background:#ffe6e3;color:#932c23}
 .sheet tr.score-warning input.score,.settle.chip-warning input[data-chip]{background:#fff1ef;border-color:#ce6b60}
+#statsTable .player-stats-link{background:transparent;color:#176b4d;padding:4px 0;min-height:44px;font:inherit;font-weight:600;text-align:left;white-space:nowrap;text-decoration:underline;text-underline-offset:3px}
 </style></head><body><main><div class="row"><div><h1>🀄 セット麻雀 スコアシート</h1><div class="sub">半荘ごとに入力・自動保存</div></div><span class="pill">ローカル保存</span></div>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイントレート（円/pt）<input id="rate" type="number" min="0" step="1"></label><label>チップレート（円/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
 <section class="card"><div class="row"><h2>プレイヤーマスター</h2><button class="secondary" id="manageMaster">登録・編集</button></div><p class="hint">一度登録した仲間を次回以降のセットでも選べます。名前の変更は過去のセット記録には影響しません。</p></section>
@@ -310,7 +311,7 @@ function renderStats(){
   const stats=new Map();
   for(const {set} of history.filter(({set})=>matches(set))){
     for(const r of setResults(set)){
-      const a=stats.get(r.id)||{name:r.name,pt:0,chips:0,rounds:0,yen:0,sets:0,ranks:[0,0,0,0]};
+      const a=stats.get(r.id)||{id:r.id,name:r.name,pt:0,chips:0,rounds:0,yen:0,sets:0,ranks:[0,0,0,0]};
       a.name=r.name;
       a.pt+=r.pt;
       a.chips+=r.chips;
@@ -325,7 +326,7 @@ function renderStats(){
   $('statsTable').innerHTML='<thead><tr><th>プレイヤー</th><th>通算セット</th><th>通算半荘</th><th>1着</th><th>2着</th><th>3着</th><th>4着</th><th>連対率</th><th>累計pt</th><th>チップ</th><th>収支</th></tr></thead><tbody>'+rows.map(r=>{
     const ranked=r.ranks.reduce((sum,count)=>sum+count,0);
     const rate=ranked?((r.ranks[0]+r.ranks[1])*100/ranked).toFixed(1)+'%':'—';
-    return `<tr><td><button class="secondary" data-player-stats="${esc(r.id)}">${esc(r.name)}</button></td><td>${r.sets}</td><td>${r.rounds}</td>${r.ranks.map(count=>`<td>${count}</td>`).join('')}<td>${rate}</td><td class="${r.pt>=0?'positive':'negative'}">${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td class="${r.yen>=0?'positive':'negative'}"><b>${fmt(r.yen)}円</b></td></tr>`;
+    return `<tr><td><button class="player-stats-link" data-player-stats="${esc(r.id)}">${esc(r.name)}</button></td><td>${r.sets}</td><td>${r.rounds}</td>${r.ranks.map(count=>`<td>${count}</td>`).join('')}<td>${rate}</td><td class="${r.pt>=0?'positive':'negative'}">${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td class="${r.yen>=0?'positive':'negative'}"><b>${fmt(r.yen)}円</b></td></tr>`;
   }).join('')+'</tbody>';
   const reversed=$('statsPeriod').value==='range'&&$('statsFrom').value&&$('statsTo').value&&$('statsFrom').value>$('statsTo').value;
   $('statsNote').textContent=reversed?'終了日は開始日以降にしてください。':rows.length?'通算半荘は点数を入力した回数です。着順と連対率は対局人数分の点数がそろった半荘で集計します。同点は同順位です。':'まだ集計できるデータがありません。';
