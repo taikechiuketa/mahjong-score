@@ -41,6 +41,8 @@
 #statsTable :is(th,td),#ratingTable :is(th,td){padding:3px 6px;line-height:1.25;white-space:nowrap}
 #statsTable .player-stats-link,#ratingTable .player-stats-link{min-height:28px;padding:2px 0;line-height:1.25}
 .sort-heading{background:none;color:inherit;font:inherit;padding:4px 0;white-space:nowrap}.sort-heading span{font-size:.8em;color:#a90022}
+#statsPeriod,#totalsMode,#ratingMode{width:auto;max-width:100%}
+#totalsPanel>label{display:inline-flex;align-items:center;gap:8px;margin-bottom:16px}
 </style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header>
 <p><a href="./rules.html">公式ルールブック</a></p>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイント倍率<input id="rate" type="number" min="0" step="1"></label><label>チップレート（pt/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
@@ -606,19 +608,35 @@ function renderPlayerStats(){
   const percent=count=>ranked?(count*100/ranked).toFixed(1)+'%':'—';
   const averageRank=ranked?(totals.ranks.reduce((sum,count,i)=>sum+count*(i+1),0)/ranked).toFixed(2):'—';
   const averagePt=totals.rounds?(totals.pt/totals.rounds).toFixed(2)+' pt':'—';
+  const peers=aggregateStats(sets,mode);
+  const rankCount=r=>r.ranks.reduce((sum,n)=>sum+n,0);
+  const ratio=(r,n)=>rankCount(r)?n/rankCount(r):null;
+  function placement(metric,ascending=false){
+    const player=peers.find(r=>r.id===selectedPlayerId);
+    const score=player?metric(player):null;
+    if(score==null)return '';
+    const ahead=peers.filter(r=>{
+      const other=metric(r);
+      return other!=null&&(ascending?other<score:other>score);
+    }).length;
+    return '（'+(ahead+1)+'位）';
+  }
   const metrics=[
-    ['対局数',totals.rounds],
-    ['累計pt',fmt(totals.pt)+' pt'],
-    ['累計チップ',fmt(totals.chips)+' 枚'],
-    ['累計収支',fmt(totals.yen)+' pt']
+    ['対局数',totals.rounds,r=>r.rounds],
+    ['累計pt',fmt(totals.pt)+' pt',r=>r.pt],
+    ['累計チップ',fmt(totals.chips)+' 枚',r=>r.chips],
+    ['累計収支',fmt(totals.yen)+' pt',r=>r.yen]
   ];
   if(mode!=='all')metrics.push(
-    ['トップ率',percent(totals.ranks[0])],['連対率',percent(totals.ranks[0]+totals.ranks[1])],
-    ['ラス率',percent(totals.lasts)],['平均順位',averageRank],['平均pt',averagePt],
-    ['着順内訳',totals.ranks.slice(0,mode==='normal'?3:4).map((n,i)=>`${i+1}着 ${n}回`).join(' ／ ')]
+    ['トップ率',percent(totals.ranks[0]),r=>ratio(r,r.ranks[0])],
+    ['連対率',percent(totals.ranks[0]+totals.ranks[1]),r=>ratio(r,r.ranks[0]+r.ranks[1])],
+    ['ラス率',percent(totals.lasts),r=>ratio(r,r.lasts),true],
+    ['平均順位',averageRank,r=>ratio(r,r.ranks.reduce((sum,n,i)=>sum+n*(i+1),0)),true],
+    ['平均pt',averagePt,r=>r.rounds?r.pt/r.rounds:null],
+    ['着順内訳',totals.ranks.slice(0,mode==='normal'?3:4).map((n,i)=>`${i+1}着 ${n}回${placement(r=>rankCount(r)?r.ranks[i]:null)}`).join(' ／ ')]
   );
-  $('playerStatsResults').innerHTML='<table class="history-table"><tbody>'+metrics.map(([label,result])=>
-    `<tr><th scope="row">${label}</th><td>${result}</td></tr>`).join('')+'</tbody></table>';
+  $('playerStatsResults').innerHTML='<table class="history-table"><tbody>'+metrics.map(([label,result,metric,ascending])=>
+    `<tr><th scope="row">${label}</th><td>${result}${metric?placement(metric,ascending):''}</td></tr>`).join('')+'</tbody></table>';
 }
 $('statsTable').onclick=e=>{
   const button=e.target.closest('[data-player-stats]');
