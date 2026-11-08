@@ -358,12 +358,38 @@ function renderStats(){
   }).join('')+'</tbody>';
   const reversed=$('statsPeriod').value==='range'&&$('statsFrom').value&&$('statsTo').value&&$('statsFrom').value>$('statsTo').value;
   $('statsNote').textContent=reversed?'終了日は開始日以降にしてください。':rows.length?'通算半荘は点数を入力した回数です。着順と連対率は対局人数分の点数がそろった半荘で集計します。同点は同順位です。':'まだ集計できるデータがありません。';
-  $('historyList').innerHTML=history.reverse().map(({set,index})=>{
+  history.sort((a,b)=>(b.set.date||'').localeCompare(a.set.date||'')||Number(b.set.sequence||0)-Number(a.set.sequence||0));
+  $('historyList').innerHTML=history.map(({set,index})=>{
     const results=setResults(set);
     const label=index===null?(set.archiveId?'（進行中・保存済み）':'（進行中）'):'';
     const edit=index===null||editing?'':`<button class="secondary" data-edit-history="${index}">このセットを編集</button>`;
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary>${edit}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}円</td></tr>`).join('')}</tbody></table></details>`;
+    const rounds=index===null||editing||!set.rounds.length?'':`<details><summary>半荘一覧（${set.rounds.length}件）</summary><ol>${set.rounds.map((round,i)=>`<li><span>第${i+1}半荘（${round.mode==='north'?'四人三麻':'三麻'}）</span> <button type="button" class="danger" data-delete-history-round="${i}" data-history-index="${index}">削除</button></li>`).join('')}</ol></details>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary>${edit}${rounds}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}円</td></tr>`).join('')}</tbody></table></details>`;
   }).join('');
+  $('historyList').onclick=e=>{
+    const edit=e.target.closest('[data-edit-history]');
+    if(edit)startHistoryEdit(Number(edit.dataset.editHistory));
+    const button=e.target.closest('[data-delete-history-round]');
+    if(!button||editing)return;
+    const index=Number(button.dataset.historyIndex);
+    const roundIndex=Number(button.dataset.deleteHistoryRound);
+    const displayed=history.find(entry=>entry.index===index)?.set;
+    const saved=archives();
+    if(!displayed||!displayed.rounds[roundIndex]||JSON.stringify(saved[index])!==JSON.stringify(displayed)){
+      alert('履歴が更新されました。開き直してから削除してください。');
+      renderStats();
+      return;
+    }
+    if(!confirm(`${displayed.date} - ${displayed.sequence||1} の第${roundIndex+1}半荘を削除しますか？`))return;
+    saved[index].rounds.splice(roundIndex,1);
+    try{
+      localStorage.setItem(ARCHIVE_KEY,JSON.stringify(saved));
+    }catch{
+      alert('セット履歴に保存できませんでした。');
+      return;
+    }
+    renderStats();
+  };
 }
 let selectedPlayerId;
 let playerStatsMode='all';
@@ -489,10 +515,6 @@ $('playerStatsTabs').onkeydown=e=>{
   e.preventDefault();
   selectPlayerStatsTab(tabs[target].dataset.mode);
   tabs[target].focus();
-};
-$('historyList').onclick=e=>{
-  const button=e.target.closest('[data-edit-history]');
-  if(button)startHistoryEdit(Number(button.dataset.editHistory));
 };
 $('statsFrom').onchange=$('statsTo').onchange=renderStats;
 function switchPage(page){const stats=page==='stats';$('sheetPage').hidden=stats;$('statsPage').hidden=!stats;$('tabStats').classList.toggle('active',stats);$('tabSheet').classList.toggle('active',!stats);if(stats)renderStats();window.scrollTo(0,0)}
