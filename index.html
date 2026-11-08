@@ -214,7 +214,7 @@ function parseJanboText(raw){
   if(start<0||first<0||total<0||chip<0||balance<0)throw Error();
   const names=lines.slice(start+1,first).filter(line=>line!=='face'&&line!=='person');
   const count=names.length;
-  if(![3,4].includes(count)||chip-total!==count+1||balance-chip!==count+1)throw Error();
+  if(count<3||chip-total!==count+1||balance-chip!==count+1)throw Error();
   const readNumbers=(values,allowSkip=false)=>{
     if(values.length!==count||values.some(value=>!(allowSkip&&value==='-')&&!/^[-+−]?\d+$/.test(value)))throw Error();
     return values.map(value=>value==='-'?'skip':Number(value.replace('−','-')));
@@ -222,14 +222,17 @@ function parseJanboText(raw){
   const scores=[];
   for(let i=first;i<total;i+=count+1){
     if(lines[i]!==String(scores.length+1)||i+count>=total)throw Error();
-    scores.push(readNumbers(lines.slice(i+1,i+count+1),true));
+    const row=readNumbers(lines.slice(i+1,i+count+1),true);
+    const sum=row.reduce((acc,score)=>acc+value(score),0);
+    if(sum!==0)throw new Error('第'+(scores.length+1)+'半荘の点数合計が '+fmt(sum)+' pt です。雀簿の点数を確認してください。');
+    scores.push(row);
   }
   const totals=readNumbers(lines.slice(total+1,chip));
   const chips=readNumbers(lines.slice(chip+1,balance));
   const balances=readNumbers(lines.slice(balance+1,balance+count+1));
   if(totals.some((points,i)=>points!==scores.reduce((sum,row)=>sum+value(row[i]),0)||
     Math.abs(points*rate+chips[i]*chipRate-balances[i])>0.000001))throw Error();
-  return {date,names,scores,chips,rate,chipRate,mode:count===4&&!scores.some(row=>row.includes('skip'))?'north':'normal'};
+  return {date,names,scores,chips,rate,chipRate,mode:scores[0]?.filter(Number.isSafeInteger).length===4?'north':'normal'};
 }
 $('importHistory').onclick=()=>$('importHistoryDialog').showModal();
 $('closeHistoryImport').onclick=()=>$('importHistoryDialog').close();
@@ -243,13 +246,13 @@ $('previewHistoryImport').onclick=()=>{
     const count=names?.length;
     const required=mode==='north'?4:3;
     if(!['normal','north'].includes(mode)||!/^\d{4}\/\d{2}\/\d{2}$/.test(date)||
-      !Array.isArray(names)||count<required||count>4||names.some(name=>typeof name!=='string'||!name.trim())||
+      !Array.isArray(names)||count<required||names.some(name=>typeof name!=='string'||!name.trim())||
       new Set(names).size!==count||!Array.isArray(scores)||!scores.length||
       scores.some(row=>!Array.isArray(row)||row.length!==count||row.filter(Number.isSafeInteger).length!==required||row.some(n=>n!=='skip'&&!Number.isSafeInteger(n))||row.reduce((sum,n)=>sum+value(n),0)!==0)||
       !Array.isArray(chips)||chips.length!==count||!chips.every(Number.isSafeInteger)||chips.reduce((sum,n)=>sum+n,0)!==0||
       ![rate,chipRate].every(n=>Number.isFinite(n)&&n>=0))throw Error();
-  }catch{
-    alert('取り込めませんでした。対局日、レート、スコア表、チップ、収支までコピーできているか確認してください。');
+  }catch(error){
+    alert(error.message.startsWith('第')?error.message:'取り込めませんでした。対局日、レート、スコア表、チップ、収支までコピーできているか確認してください。');
     return;
   }
   const {date,names,scores,chips,rate,chipRate,mode}=data;
