@@ -11,6 +11,7 @@ img{border-radius:8px;background:white;object-fit:contain}h1{font-size:clamp(18p
 section{margin-top:14px;background:white;padding:14px;border-radius:14px}h2{font-size:17px;margin:0}#status{font-size:13px;color:#555861}
 table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px 4px;border-bottom:1px solid #e4e4e7;text-align:right}th:first-child,td:first-child{text-align:left;overflow-wrap:anywhere}td:last-child{font-weight:700;color:#a90022}
 nav{display:flex;gap:6px;margin-top:14px}nav button{flex:1;border:0;padding:9px 4px;border-radius:8px;background:white;color:#171b21;font-weight:700}nav button[aria-pressed=true]{background:#c60027;color:white}.scroll{overflow:auto}details{padding:8px 0;border-bottom:1px solid #e4e4e7}summary{cursor:pointer}.negative{color:#a90022}
+.player-link{border:0;background:none;color:#a90022;font:inherit;font-weight:bold;text-decoration:underline;white-space:nowrap;min-height:44px;cursor:pointer}dialog{width:min(92vw,440px);height:min(600px,90dvh);border:0;border-radius:14px;padding:16px;overflow:auto}dialog::backdrop{background:#0008}dialog nav button{background:#f3f3f5}dialog form{margin-top:14px;text-align:right}
 </style>
 <main>
 <header><img src="./takechao-logo.jpg" alt="TAKECHI" width="56" height="62"><div><h1>たけちゃお成績管理</h1><p>閲覧専用</p></div></header>
@@ -23,6 +24,7 @@ nav{display:flex;gap:6px;margin-top:14px}nav button{flex:1;border:0;padding:9px 
 </table></div>
 </section><section id="history" hidden><h2>半荘履歴</h2><div id="publicHistory"></div></section><section id="rating" hidden><h2>レーティング</h2><label>ルール <select id="publicRatingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><div id="publicRating"></div></section>
 </main>
+<dialog id="personDialog" aria-labelledby="personTitle"><h2 id="personTitle"></h2><nav id="personModes" aria-label="ルール"><button type="button" data-mode="all">すべて</button><button type="button" data-mode="normal">三麻</button><button type="button" data-mode="north">四人三麻</button><button type="button" data-mode="trend">推移グラフ</button></nav><div id="personStats"></div><form method="dialog"><button>閉じる</button></form></dialog>
 <script>
 const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
 const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
@@ -62,10 +64,15 @@ async function loadResults(){
     if(!Number.isFinite(date.getTime())||!Array.isArray(rows)||standings.some(row=>!row||typeof row.name!=='string'||![row.sets,row.rounds,row.pt].every(Number.isFinite)))throw Error();
     const format=new Intl.NumberFormat('ja-JP');
     table.tBodies[0].replaceChildren();
-    for(const {name,sets,rounds,pt,ranks} of standings){
+    for(const player of standings){
+      const {name,sets,rounds,pt,ranks}=player;
       const row=table.tBodies[0].insertRow();
       const ranked=ranks?.reduce((sum,n)=>sum+n,0);
-      for(const text of [name,format.format(sets),format.format(rounds),format.format(pt),...(ranks||['—','—','—','—']),ranked?((ranks[0]+ranks[1])*100/ranked).toFixed(1)+'%':'—'])row.insertCell().textContent=text;
+      const link=document.createElement('button');
+      link.type='button';link.className='player-link';link.textContent=name;
+      link.onclick=()=>openPublicPlayer(player,details?.history||[]);
+      row.insertCell().append(link);
+      for(const text of [format.format(sets),format.format(rounds),format.format(pt),...(ranks||['—','—','—','—']),ranked?((ranks[0]+ranks[1])*100/ranked).toFixed(1)+'%':'—'])row.insertCell().textContent=text;
     }
     status.textContent='集計日時 '+new Intl.DateTimeFormat('ja-JP',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tokyo'}).format(date);
     table.hidden=false;
@@ -94,6 +101,54 @@ function publicTable(headers,rows){
     }
   }
   return wrapper;
+}
+function openPublicPlayer(player,history){
+  const title=document.getElementById('personTitle');
+  const panel=document.getElementById('personStats');
+  const tabs=[...document.querySelectorAll('#personModes button')];
+  title.textContent=player.name+'の個人成績';
+  const render=mode=>{
+    tabs.forEach(tab=>tab.setAttribute('aria-pressed',String(tab.dataset.mode===mode)));
+    panel.replaceChildren();
+    if(mode==='all'){
+      panel.append(publicTable(['項目','成績'],[['対局数',player.rounds],['累計pt',player.pt]]));
+      return;
+    }
+    const scores=[];
+    for(const set of [...history].reverse()){
+      const index=set.names.indexOf(player.name);
+      if(index<0)continue;
+      for(const round of set.rounds){
+        const rule=round.mode==='north'?'north':'normal';
+        if(mode!=='trend'&&rule!==mode)continue;
+        const valid=v=>v!=null&&v!==''&&v!=='skip'&&Number.isInteger(Number(v));
+        if(!valid(round.scores[index]))continue;
+        const pt=Number(round.scores[index]);
+        const played=round.scores.filter(valid).map(Number);
+        scores.push({pt,rank:played.length===(rule==='north'?4:3)?1+played.filter(v=>v>pt).length:0});
+      }
+    }
+    if(!scores.length){panel.textContent='対象の半荘データがありません。';return}
+    const total=scores.reduce((sum,row)=>sum+row.pt,0);
+    if(mode==='trend'){
+      const points=[0];
+      for(const row of scores)points.push(points.at(-1)+row.pt);
+      const min=points.reduce((a,b)=>Math.min(a,b),0),max=points.reduce((a,b)=>Math.max(a,b),0);
+      const path=points.map((v,i)=>`${12+296*i/(points.length-1)},${max===min?55:95-80*(v-min)/(max-min)}`).join(' ');
+      panel.innerHTML=`<p>累計ptの推移（半荘ごと） ${total.toLocaleString('ja-JP')} pt</p><svg viewBox="0 0 320 108" width="100%" role="img" aria-label="累計ポイントの推移"><polyline points="${path}" fill="none" stroke="#c60027" stroke-width="2.5"/></svg>`;
+      return;
+    }
+    const ranked=scores.filter(row=>row.rank);
+    const ranks=Array.from({length:mode==='north'?4:3},(_,i)=>ranked.filter(row=>row.rank===i+1).length);
+    const percent=n=>ranked.length?(100*n/ranked.length).toFixed(1)+'%':'—';
+    panel.append(publicTable(['項目','成績'],[['対局数',scores.length],['累計pt',total],
+      ['トップ率',percent(ranks[0])],['連対率',percent(ranks[0]+ranks[1])],['ラス率',percent(ranks.at(-1))],
+      ['平均順位',ranked.length?(ranked.reduce((sum,row)=>sum+row.rank,0)/ranked.length).toFixed(2):'—'],
+      ['平均pt',(total/scores.length).toFixed(2)],['着順内訳',ranks.map((n,i)=>`${i+1}着 ${n}回`).join(' ／ ')]]));
+  };
+  tabs.forEach(tab=>tab.onclick=()=>render(tab.dataset.mode));
+  render('all');
+  document.getElementById('personDialog').showModal();
 }
 function renderPublicDetails(data){
   const history=document.getElementById('publicHistory');
