@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>たけちゃお成績管理｜閲覧専用</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f3f5;color:#171b21;font-family:system-ui,sans-serif}
+main{max-width:740px;margin:auto;padding:16px}header{display:flex;gap:14px;align-items:center;background:#171b21;color:white;border-bottom:4px solid #c60027;padding:12px;border-radius:14px}
+img{border-radius:8px;background:white;object-fit:contain}h1{font-size:clamp(18px,5vw,24px);margin:0}header p{margin:4px 0 0;font-size:13px}
+section{margin-top:14px;background:white;padding:14px;border-radius:14px}h2{font-size:17px;margin:0}#status{font-size:13px;color:#555861}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px 4px;border-bottom:1px solid #e4e4e7;text-align:right}th:first-child,td:first-child{text-align:left;overflow-wrap:anywhere}td:last-child{font-weight:700;color:#a90022}
+</style>
+<main>
+<header><img src="./takechao-logo.jpg" alt="TAKECHI" width="56" height="62"><div><h1>たけちゃお成績管理</h1><p>閲覧専用</p></div></header>
+<section>
+<h2>通算成績</h2>
+<p id="status" role="status">読み込み中…</p>
+<table id="results" hidden>
+<thead><tr><th scope="col">プレイヤー</th><th scope="col">セット</th><th scope="col">対局数</th><th scope="col">累計pt</th></tr></thead>
+<tbody></tbody>
+</table>
+</section>
+</main>
+<script>
+async function loadResults(){
+  const status=document.getElementById('status');
+  const table=document.getElementById('results');
+  try{
+    const response=await fetch('./public-results.json',{cache:'no-store'});
+    if(response.status===404){
+      status.textContent='成績はまだ公開されていません。';
+      return;
+    }
+    if(!response.ok)throw Error();
+    const {updatedAt,rows}=await response.json();
+    const date=new Date(updatedAt);
+    if(!Number.isFinite(date.getTime())||!Array.isArray(rows)||rows.some(row=>!row||typeof row.name!=='string'||![row.sets,row.rounds,row.pt].every(Number.isFinite)))throw Error();
+    const format=new Intl.NumberFormat('ja-JP');
+    for(const {name,sets,rounds,pt} of rows){
+      const row=table.tBodies[0].insertRow();
+      for(const text of [name,format.format(sets),format.format(rounds),format.format(pt)])row.insertCell().textContent=text;
+    }
+    status.textContent='集計日時 '+new Intl.DateTimeFormat('ja-JP',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tokyo'}).format(date);
+    table.hidden=false;
+  }catch{
+    status.textContent='成績を読み込めませんでした。時間をおいて再読み込みしてください。';
+  }
+}
+loadResults();
+</script>
+</html>
