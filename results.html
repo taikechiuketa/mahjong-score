@@ -48,7 +48,8 @@
 #playerStatsResults .metric-value,#playerStatsResults .metric-rank{white-space:nowrap;font-variant-numeric:tabular-nums}
 #playerStatsResults .metric-rank{width:5em;text-align:right;color:#555861}
 #playerStatsResults .rank-breakdown{white-space:normal}
-</style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header><p class="hint" id="publicStatus" role="status">読み込み中…</p><div id="statsPage"><section class="card"><h2>通算成績</h2><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><label>ルール <select id="ratingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><p class="hint">全期間の現在R。20半荘未満は暫定です。名前をタップすると選択期間の推移を表示します。</p><div class="rating-scroll"><table id="ratingTable" class="history-table"></table></div><div id="ratingTrend"></div></div><div id="totalsPanel" class="standings-scroll"><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
+#playerStatsTabs{flex-wrap:wrap}#playerStatsTabs button{flex:1 1 4.5em;white-space:nowrap;font-size:12px}
+</style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header><p class="hint" id="publicStatus" role="status">読み込み中…</p><div id="statsPage"><section class="card"><h2>通算成績</h2><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><label>ルール <select id="ratingMode"><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><p class="hint">全期間の現在R。20半荘未満は暫定です。名前をタップすると選択期間の推移を表示します。</p><div class="rating-scroll"><table id="ratingTable" class="history-table"></table></div><div id="ratingTrend"></div></div><div id="totalsPanel" class="standings-scroll"><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleYonma" role="tab" aria-controls="playerStatsResults" data-mode="yonma">四人麻雀</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
 const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
 async function cloudRequest(path,{token,method='GET',data}={}){
   const headers={apikey:cloudKey};
@@ -70,13 +71,16 @@ const fmt=n=>(n>0?'+':'')+n.toLocaleString('ja-JP');
 const master=[],editing=null,state={players:[],rounds:[]};
 let published=[];
 const historyEntries=()=>published.map((set,index)=>({set,index}));
+function roundRule(mode){return mode==='north'||mode==='yonma'?mode:'normal'}
+function roundSize(mode){return roundRule(mode)==='normal'?3:4}
+function roundLabel(mode){return {normal:'三麻',north:'四人三麻',yonma:'四人麻雀'}[roundRule(mode)]}
 function setResults(set,mode='all'){
   const results=set.players.map(p=>({
     id:p.masterId||master.find(m=>m.name===p.name)?.id||'name:'+p.name,name:master.find(m=>m.id===p.masterId)?.name||p.name,
     pt:0,chips:value(p.chips),rounds:0,ranks:[0,0,0,0],lasts:0
   }));
   for(const round of set.rounds){
-    const rule=round.mode==='north'?'north':'normal';
+    const rule=roundRule(round.mode);
     if(mode!=='all'&&mode!==rule)continue;
     const played=[];
     set.players.forEach((p,i)=>{
@@ -87,7 +91,7 @@ function setResults(set,mode='all'){
       result.rounds++;
       played.push({result,score:Number(score)});
     });
-    if(played.length!==(round.mode==='north'?4:3))continue;
+    if(played.length!==(roundSize(round.mode)))continue;
     for(const player of played){
       const rank=played.filter(other=>other.score>player.score).length;
       player.result.ranks[rank]++;
@@ -114,7 +118,7 @@ function statsDateFilter(){
 function aggregateStats(sets,mode='all'){
   const stats=new Map();
   for(const set of sets){
-    const rules=new Set(set.rounds.filter(r=>Object.values(r.scores||{}).some(v=>v!=null&&v!==''&&v!=='skip')).map(r=>r.mode==='north'?'north':'normal'));
+    const rules=new Set(set.rounds.filter(r=>Object.values(r.scores||{}).some(v=>v!=null&&v!==''&&v!=='skip')).map(r=>roundRule(r.mode)));
     const chips=mode==='all'||(rules.size===1&&rules.has(mode));
     for(const r of setResults(set,mode)){
       if(mode!=='all'&&!r.rounds&&!(chips&&r.chips))continue;
@@ -168,7 +172,7 @@ function renderStats(){
   if(!$('ratingPanel').hidden)renderRatings(history.map(entry=>entry.set),matches);
   const mode=$('totalsMode').value;
   const rows=aggregateStats(history.map(entry=>entry.set).filter(matches),mode);
-  const rankCount=mode==='all'?0:mode==='north'?4:3;
+  const rankCount=mode==='all'?0:roundSize(mode);
   const headings=['プレイヤー','累計ポイント','収支','通算セット数','通算半荘数','通算チップ','トップ率','ラス率',...Array.from({length:rankCount},(_,i)=>(i+1)+'着')];
   $('statsTable').innerHTML=sortedTable('statsTable',headings,rows,r=>{
     const ranked=r.ranks.reduce((sum,n)=>sum+n,0);
@@ -186,16 +190,16 @@ function renderStats(){
   $('historyList').innerHTML=history.map(({set,index})=>{
     const results=setResults(set);
     const label="",edit="",remove="";
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人</summary><p class="hint">ルール ${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"—"}</p><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
   }).join('');
 }
 function calculateRatings(sets,mode){
   const players=new Map();
-  const required=mode==='north'?4:3;
+  const required=roundSize(mode);
   const ordered=[...sets].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||Number(a.sequence||0)-Number(b.sequence||0));
   for(const set of ordered){
     for(const round of set.rounds){
-      if((round.mode==='north'?'north':'normal')!==mode)continue;
+      if((roundRule(round.mode))!==mode)continue;
       const played=[];
       for(const player of set.players){
         const score=round.scores?.[player.id];
@@ -316,7 +320,7 @@ function renderPlayerStats(){
   for(const set of sets){
     const playedRules=new Set(set.rounds
       .filter(round=>Object.values(round.scores||{}).some(score=>score!=null&&score!==''&&score!=='skip'))
-      .map(round=>round.mode==='north'?'north':'normal'));
+      .map(round=>roundRule(round.mode)));
     const includeChips=mode==='all'||(playedRules.size===1&&playedRules.has(mode));
     for(const result of setResults(set,mode)){
       if(result.id!==selectedPlayerId)continue;
