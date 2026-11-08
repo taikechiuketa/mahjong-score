@@ -216,6 +216,31 @@ $('saveSet').onclick=()=>{
   if(archiveCurrent())$('saveStatus').textContent='セット履歴に保存しました。';
 };
 
+function ensureImportedPlayer(name,registry){
+  let player=registry.find(entry=>entry.name===name);
+  if(!player){
+    player={id:uid(),name};
+    registry.push(player);
+  }
+  return player.id;
+}
+function backfillImportedPlayers(){
+  const history=archives();
+  const registry=[...master];
+  let changed=false;
+  for(const set of history){
+    if(!set?.importKey||!Array.isArray(set.players))continue;
+    for(const player of set.players){
+      if(player.masterId||typeof player.name!=='string'||!player.name.trim())continue;
+      player.masterId=ensureImportedPlayer(player.name,registry);
+      changed=true;
+    }
+  }
+  if(!changed)return;
+  localStorage.setItem(MASTER_KEY,JSON.stringify(registry));
+  master=registry;
+  localStorage.setItem(ARCHIVE_KEY,JSON.stringify(history));
+}
 function parseJanboText(raw){
   const lines=raw.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
   const date=raw.match(/対局日\s*(\d{4}\/\d{2}\/\d{2})/)?.[1];
@@ -285,10 +310,13 @@ $('previewHistoryImport').onclick=()=>{
   if(!confirm(`${date}・${mode==='north'?'四人三麻':'三麻'}・${scores.length}半荘\n\n${summary}\n\n表示されたルールと収支を確認して、セット履歴に追加しますか？`))return;
   const current=editing?.current||state;
   const sequence=Math.max(0,...[...history,current].filter(set=>set?.date===date).map(set=>Number(set.sequence)||0))+1;
-  const players=names.map((name,i)=>({id:uid(),name,chips:chips[i],masterId:master.find(player=>player.name===name)?.id}));
+  const registry=[...master];
+  const players=names.map((name,i)=>({id:uid(),name,chips:chips[i],masterId:ensureImportedPlayer(name,registry)}));
   const rounds=scores.map(row=>({id:uid(),mode,scores:Object.fromEntries(players.map((player,i)=>[player.id,row[i]]))}));
   history.push({date,sequence,players,rounds,rate,chipRate,importKey:key});
   try{
+    localStorage.setItem(MASTER_KEY,JSON.stringify(registry));
+    master=registry;
     localStorage.setItem(ARCHIVE_KEY,JSON.stringify(history));
     queueMicrotask(syncCloud);
   }catch{
@@ -824,6 +852,7 @@ $('cloudRestore').onclick=async ()=>{
     localStorage.setItem(MASTER_KEY,JSON.stringify(data.master));
     state=data.current;
     master=data.master;
+    backfillImportedPlayers();
     cloudRevision=saved.updated_at;
     cloudReady=true;
     rememberCloud();
@@ -865,5 +894,6 @@ async function resumeCloud(){
   }finally{cloudBusy=false}
   if(cloudReady)syncCloud();
 }
+try{backfillImportedPlayers()}catch{alert("雀簿のプレイヤーマスターを更新できませんでした。")}
 resumeCloud();
 </script></body></html>
