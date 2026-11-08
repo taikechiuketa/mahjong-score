@@ -38,6 +38,8 @@
 #statsTable thead th,#ratingTable thead th{position:sticky;top:0;z-index:2;background:#f3f3f5}
 #statsTable thead th:first-child,#ratingTable thead th:first-child{z-index:3}
 #statsTable :is(th,td):first-child,#ratingTable :is(th,td):first-child{position:sticky;left:0;z-index:1;background:#fff;white-space:nowrap;box-shadow:2px 0 0 #e4e4e7}
+#statsTable :is(th,td),#ratingTable :is(th,td){padding:3px 6px;line-height:1.25;white-space:nowrap}
+#statsTable .player-stats-link,#ratingTable .player-stats-link{min-height:28px;padding:2px 0;line-height:1.25}
 </style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header>
 <p><a href="./rules.html">公式ルールブック</a></p>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイント倍率<input id="rate" type="number" min="0" step="1"></label><label>チップレート（pt/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
