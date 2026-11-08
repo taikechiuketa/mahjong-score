@@ -40,6 +40,7 @@
 #statsTable :is(th,td):first-child,#ratingTable :is(th,td):first-child{position:sticky;left:0;z-index:1;background:#fff;white-space:nowrap;box-shadow:2px 0 0 #e4e4e7}
 #statsTable :is(th,td),#ratingTable :is(th,td){padding:3px 6px;line-height:1.25;white-space:nowrap}
 #statsTable .player-stats-link,#ratingTable .player-stats-link{min-height:28px;padding:2px 0;line-height:1.25}
+.sort-heading{background:none;color:inherit;font:inherit;padding:4px 0;white-space:nowrap}.sort-heading span{font-size:.8em;color:#a90022}
 </style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header>
 <p><a href="./rules.html">公式ルールブック</a></p>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button id="saveSet">セットを保存</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><div class="settings"><label>ポイント倍率<input id="rate" type="number" min="0" step="1"></label><label>チップレート（pt/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></section>
@@ -373,6 +374,35 @@ $('exportPublicStats').onclick=()=>{
   link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
+const tableSort={statsTable:{column:1,direction:-1},ratingTable:{column:1,direction:-1}};
+function sortedTable(id,headings,rows,values){
+  const order=tableSort[id];
+  if(order.column>=headings.length){order.column=1;order.direction=-1}
+  const column=order.column;
+  rows.sort((a,b)=>{
+    const left=values(a)[column],right=values(b)[column];
+    if(left==null||right==null)return Number(left==null)-Number(right==null);
+    const comparison=typeof left==='string'?left.localeCompare(right,'ja'):left-right;
+    return order.direction*comparison;
+  });
+  return '<thead><tr>'+headings.map((label,i)=>{
+    const active=i===column;
+    const direction=order.direction===1?'ascending':'descending';
+    return `<th scope="col"${active?' aria-sort="'+direction+'"':''}><button type="button" class="sort-heading" data-sort-column="${i}">${label} <span aria-hidden="true">${active?(order.direction===1?'▲':'▼'):'↕'}</span></button></th>`;
+  }).join('')+'</tr></thead>';
+}
+function bindTableSort(id){
+  $(id).tHead.onclick=event=>{
+    const button=event.target.closest('[data-sort-column]');
+    if(!button)return;
+    const column=Number(button.dataset.sortColumn);
+    const order=tableSort[id];
+    order.direction=order.column===column?-order.direction:column===0?1:-1;
+    order.column=column;
+    renderStats();
+    $(id).tHead.querySelector('[data-sort-column="'+column+'"]').focus({preventScroll:true});
+  };
+}
 function renderStats(){
   const current=editing?.current||state;
   const history=[...historyEntries(),{set:current,index:null}];
@@ -382,12 +412,16 @@ function renderStats(){
   const rows=aggregateStats(history.map(entry=>entry.set).filter(matches),mode);
   const rankCount=mode==='all'?0:mode==='north'?4:3;
   const headings=['プレイヤー','累計ポイント','収支','通算セット数','通算半荘数','通算チップ','トップ率','ラス率',...Array.from({length:rankCount},(_,i)=>(i+1)+'着')];
-  $('statsTable').innerHTML='<thead><tr>'+headings.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>{
+  $('statsTable').innerHTML=sortedTable('statsTable',headings,rows,r=>{
+    const ranked=r.ranks.reduce((sum,n)=>sum+n,0);
+    return [r.name,r.pt,r.yen,r.sets,r.rounds,r.chips,ranked?r.ranks[0]/ranked:null,ranked?r.lasts/ranked:null,...r.ranks];
+  })+'<tbody>'+rows.map(r=>{
     const ranked=r.ranks.reduce((sum,n)=>sum+n,0);
     const percent=n=>ranked?(100*n/ranked).toFixed(1)+'%':'—';
     const cells=[fmt(r.pt)+' pt',fmt(r.yen)+' pt',r.sets,r.rounds,fmt(r.chips),percent(r.ranks[0]),percent(r.lasts),...r.ranks.slice(0,rankCount)];
     return `<tr><td><button class="player-stats-link" data-player-stats="${esc(r.id)}">${esc(r.name)}</button></td>${cells.map((v,i)=>`<td class="${i<2&&v.startsWith('-')?'negative':''}">${v}</td>`).join('')}</tr>`;
   }).join('')+'</tbody>';
+  bindTableSort('statsTable');
   const reversed=$('statsPeriod').value==='range'&&$('statsFrom').value&&$('statsTo').value&&$('statsFrom').value>$('statsTo').value;
   $('statsNote').textContent=reversed?'終了日は開始日以降にしてください。':rows.length?'通算半荘は点数を入力した回数です。着順と割合は対局人数分の点数がそろった半荘で集計します。同点は同順位です。':'まだ集計できるデータがありません。';
   history.sort((a,b)=>(b.set.date||'').localeCompare(a.set.date||'')||Number(b.set.sequence||0)-Number(a.set.sequence||0));
@@ -461,8 +495,9 @@ function calculateRatings(sets,mode){
 let ratingPlayerId;
 function renderRatings(sets,matches){
   const rows=calculateRatings(sets,$('ratingMode').value);
-  $('ratingTable').innerHTML='<thead><tr><th>プレイヤー</th><th>現在R</th><th>対象半荘</th><th>直近</th></tr></thead><tbody>'+rows.map(p=>
+  $('ratingTable').innerHTML=sortedTable('ratingTable',['プレイヤー','現在R','対象半荘','直近'],rows,p=>[p.name,p.rating,p.history.length,p.change])+'<tbody>'+rows.map(p=>
     `<tr><td><button type="button" class="player-stats-link" data-rating-player="${esc(p.id)}">${esc(p.name)}</button></td><td><b>${Math.round(p.rating)}</b>${p.history.length<20?' <small>暫定</small>':''}</td><td>${p.history.length}</td><td>${fmt(p.change)}</td></tr>`).join('')+'</tbody>';
+  bindTableSort('ratingTable');
   const player=rows.find(p=>p.id===ratingPlayerId);
   const points=player?.history.filter(matches)||[];
   const panel=$('ratingTrend');
