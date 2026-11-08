@@ -10,17 +10,18 @@ main{max-width:740px;margin:auto;padding:16px}header{display:flex;gap:14px;align
 img{border-radius:8px;background:white;object-fit:contain}h1{font-size:clamp(18px,5vw,24px);margin:0}header p{margin:4px 0 0;font-size:13px}
 section{margin-top:14px;background:white;padding:14px;border-radius:14px}h2{font-size:17px;margin:0}#status{font-size:13px;color:#555861}
 table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px 4px;border-bottom:1px solid #e4e4e7;text-align:right}th:first-child,td:first-child{text-align:left;overflow-wrap:anywhere}td:last-child{font-weight:700;color:#a90022}
+nav{display:flex;gap:6px;margin-top:14px}nav button{flex:1;border:0;padding:9px 4px;border-radius:8px;background:white;color:#171b21;font-weight:700}nav button[aria-pressed=true]{background:#c60027;color:white}.scroll{overflow:auto}details{padding:8px 0;border-bottom:1px solid #e4e4e7}summary{cursor:pointer}.negative{color:#a90022}
 </style>
 <main>
 <header><img src="./takechao-logo.jpg" alt="TAKECHI" width="56" height="62"><div><h1>たけちゃお成績管理</h1><p>閲覧専用</p></div></header>
-<section>
+<nav aria-label="成績の表示"><button type="button" data-panel="standings" aria-pressed="true">通算成績</button><button type="button" data-panel="history" aria-pressed="false">半荘履歴</button><button type="button" data-panel="rating" aria-pressed="false">レーティング</button></nav><section id="standings">
 <h2>通算成績</h2>
 <p id="status" role="status">読み込み中…</p>
-<table id="results" hidden>
-<thead><tr><th scope="col">プレイヤー</th><th scope="col">セット</th><th scope="col">対局数</th><th scope="col">累計pt</th></tr></thead>
+<div class="scroll"><table id="results" hidden>
+<thead><tr><th scope="col">プレイヤー</th><th scope="col">セット</th><th scope="col">対局数</th><th scope="col">累計pt</th><th scope="col">1着</th><th scope="col">2着</th><th scope="col">3着</th><th scope="col">4着</th><th scope="col">連対率</th></tr></thead>
 <tbody></tbody>
-</table>
-</section>
+</table></div>
+</section><section id="history" hidden><h2>半荘履歴</h2><div id="publicHistory"></div></section><section id="rating" hidden><h2>レーティング</h2><label>ルール <select id="publicRatingMode"><option value="normal">三麻</option><option value="north">四人三麻</option></select></label><div id="publicRating"></div></section>
 </main>
 <script>
 const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
@@ -50,18 +51,77 @@ async function loadResults(){
     if(response&&!response.ok)throw Error();
     const {updatedAt,rows}=cloud.length?{updatedAt:cloud[0].updated_at,rows:cloud[0].results}:await response.json();
     const date=new Date(updatedAt);
-    if(!Number.isFinite(date.getTime())||!Array.isArray(rows)||rows.some(row=>!row||typeof row.name!=='string'||![row.sets,row.rounds,row.pt].every(Number.isFinite)))throw Error();
+    if(!Array.isArray(rows))throw Error();
+    const details=rows.find(row=>row?.kind==='details-v1');
+    const standings=rows.filter(row=>row!==details);
+    if(!Number.isFinite(date.getTime())||!Array.isArray(rows)||standings.some(row=>!row||typeof row.name!=='string'||![row.sets,row.rounds,row.pt].every(Number.isFinite)))throw Error();
     const format=new Intl.NumberFormat('ja-JP');
-    for(const {name,sets,rounds,pt} of rows){
+    for(const {name,sets,rounds,pt,ranks} of standings){
       const row=table.tBodies[0].insertRow();
-      for(const text of [name,format.format(sets),format.format(rounds),format.format(pt)])row.insertCell().textContent=text;
+      const ranked=ranks?.reduce((sum,n)=>sum+n,0);
+      for(const text of [name,format.format(sets),format.format(rounds),format.format(pt),...(ranks||['—','—','—','—']),ranked?((ranks[0]+ranks[1])*100/ranked).toFixed(1)+'%':'—'])row.insertCell().textContent=text;
     }
     status.textContent='集計日時 '+new Intl.DateTimeFormat('ja-JP',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tokyo'}).format(date);
     table.hidden=false;
+    renderPublicDetails(details);
   }catch{
     status.textContent='成績を読み込めませんでした。時間をおいて再読み込みしてください。';
   }
 }
+function publicTable(headers,rows){
+  const wrapper=document.createElement('div');
+  wrapper.className='scroll';
+  const table=document.createElement('table');
+  wrapper.append(table);
+  const head=table.createTHead().insertRow();
+  for(const label of headers){
+    const cell=document.createElement('th');
+    cell.scope='col';cell.textContent=label;head.append(cell);
+  }
+  const body=table.createTBody();
+  for(const values of rows){
+    const row=body.insertRow();
+    for(const value of values){
+      const cell=row.insertCell();cell.textContent=value;
+      if(typeof value==='number'&&value<0)cell.className='negative';
+    }
+  }
+  return wrapper;
+}
+function renderPublicDetails(data){
+  const history=document.getElementById('publicHistory');
+  const rating=document.getElementById('publicRating');
+  const mode=document.getElementById('publicRatingMode');
+  const message='管理者が次に成績を公開すると表示されます。';
+  if(!data){history.textContent=rating.textContent=message;return}
+  history.textContent=data.history.length?'':'公開済みの履歴はありません。';
+  for(const set of data.history){
+    const entry=document.createElement('details');
+    const title=document.createElement('summary');
+    title.textContent=set.date+' - '+(set.sequence||1)+'｜'+set.rounds.length+'半荘';
+    entry.append(title,publicTable(['半荘','ルール',...set.names],set.rounds.map((round,i)=>[
+      i+1,round.mode==='north'?'四人三麻':'三麻',...round.scores.map(score=>score==='skip'?'抜け':score==null||score===''?'—':Number(score))
+    ])));
+    history.append(entry);
+  }
+  mode.onchange=()=>{
+    const rows=data.ratings[mode.value];
+    rating.replaceChildren();
+    if(!rows.length){rating.textContent='対象の半荘はまだありません。';return}
+    rating.append(publicTable(['プレイヤー','現在R','対象半荘','直近'],rows.map(p=>[p.name,p.rating+(p.rounds<20?' 暫定':''),p.rounds,p.change])));
+  };
+  mode.onchange();
+}
+document.querySelectorAll('[data-panel]').forEach(button=>{
+  button.onclick=()=>{
+    document.querySelectorAll('[data-panel]').forEach(tab=>{
+      const selected=tab===button;
+      tab.setAttribute('aria-pressed',String(selected));
+      document.getElementById(tab.dataset.panel).hidden=!selected;
+    });
+  };
+});
+renderPublicDetails();
 loadResults();
 </script>
 </html>

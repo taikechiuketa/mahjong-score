@@ -679,8 +679,19 @@ async function syncCloud(){
       if(Date.now()+60000>=cloudExpiry)await renewCloud();
       const history=archives();
       const data={current:editing?.current||state,history,master};
-      const results=aggregateStats(history.filter(set=>set&&Array.isArray(set.players)&&Array.isArray(set.rounds)))
-        .sort((a,b)=>b.pt-a.pt).map(({name,sets,rounds,pt})=>({name,sets,rounds,pt}));
+      const savedSets=history.filter(set=>set&&Array.isArray(set.players)&&Array.isArray(set.rounds));
+      const results=aggregateStats(savedSets)
+        .sort((a,b)=>b.pt-a.pt).map(({name,sets,rounds,pt,ranks})=>({name,sets,rounds,pt,ranks}));
+      results.push({kind:'details-v1',
+        history:[...savedSets].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||Number(b.sequence||0)-Number(a.sequence||0)).map(set=>({
+          date:set.date,sequence:set.sequence,
+          names:set.players.map(p=>master.find(m=>m.id===p.masterId)?.name||p.name),
+          rounds:set.rounds.map(r=>({mode:r.mode,scores:set.players.map(p=>r.scores?.[p.id]??null)}))
+        })),
+        ratings:Object.fromEntries(['normal','north'].map(mode=>[mode,calculateRatings(savedSets,mode).map(p=>({
+          name:p.name,rating:Math.round(p.rating),rounds:p.history.length,change:p.change
+        }))]))
+      });
       const updated_at=new Date().toISOString();
       const path=cloudRevision?privatePath+'?owner_id=eq.'+cloudOwner+'&updated_at=eq.'+encodeURIComponent(cloudRevision):privatePath;
       cloudStatus('DBに保存中…');
@@ -702,7 +713,7 @@ async function syncCloud(){
 }
 $('cloudSave').onclick=()=>{
   if(cloudBusy||!cloudToken)return;
-  if(!cloudReady&&!confirm('この端末のデータをDBに保存し、保存済みセットの名前・セット数・対局数・累計ptを公開しますか？'))return;
+  if(!cloudReady&&!confirm('この端末のデータをDBに保存し、保存済みセットの名前・半荘別の点数・通算成績・レーティングを公開しますか？'))return;
   cloudReady=true;
   syncCloud();
 };
@@ -760,7 +771,7 @@ async function resumeCloud(){
     cloudToken=undefined;
     cloudStatus('DB同期を再開できませんでした。再ログインしてください。');
   }finally{cloudBusy=false}
-  if(cloudReady)syncCloud();
+  // Publishing new fields requires an explicit save from the editor.
 }
 resumeCloud();
 </script></body></html>
