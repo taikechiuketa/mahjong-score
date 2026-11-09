@@ -57,8 +57,10 @@
 .history-actions button,.history-share{min-height:44px;padding:6px 8px;font-size:12px;white-space:nowrap}
 .history-share{display:inline-flex;align-items:center;gap:4px;color:inherit;border:1px solid currentColor;border-radius:10px;text-decoration:none}
 .history-share:hover{text-decoration:underline}
+
+#statsTable .player-stats-link,#ratingTable .player-stats-link{display:flex;width:100%;align-items:center;justify-content:space-between;gap:6px;text-align:left;min-height:44px}
 </style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header>
-<p><a href="./rules.html">たけちゃお公式ルールブック・点数表</a></p><p class="hint" id="publicStatus" role="status">読み込み中…</p><section class="card" id="sharedSet" hidden><p><a href="./results.html">成績・セット履歴一覧へ</a></p><h2>セット結果</h2><div id="sharedResult"></div><button class="secondary" id="copySetLink" type="button" hidden>共有リンクをコピー</button><p id="copySetStatus" role="status"></p></section><div id="statsPage"><section class="card"><h2>通算成績</h2><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="monthly">月間ランキング</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><label id="statsMonthLabel" hidden>対象月 <select id="statsMonth"></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><label>ルール <select id="ratingMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><p class="hint">全期間の現在R。「すべて」は全ルールの半荘から計算する総合Rです。20半荘未満は暫定です。名前をタップすると個人成績が開き、表の下には選択期間のR推移が表示されます。</p><div class="rating-scroll"><table id="ratingTable" class="history-table"></table></div><div id="ratingTrend"></div></div><div id="totalsPanel" class="standings-scroll"><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div class="stats-filter"><label>対局者 <select id="historyPlayer"><option value="">すべて</option></select></label><label>ルール <select id="historyRule"><option value="">すべて</option><option value="normal">三人麻雀</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label></div><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleYonma" role="tab" aria-controls="playerStatsResults" data-mode="yonma">四人麻雀</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
+<p><a href="./rules.html">たけちゃお公式ルールブック・点数表</a></p><p class="hint" id="publicStatus" role="status">読み込み中…</p><section class="card" id="sharedSet" hidden><p><a href="./results.html">成績・セット履歴一覧へ</a></p><h2>セット結果</h2><div id="sharedResult"></div><button class="secondary" id="copySetLink" type="button" hidden>共有リンクをコピー</button><p id="copySetStatus" role="status"></p></section><div id="statsPage"><section class="card"><h2>通算成績</h2><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="monthly">月間ランキング</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><label id="statsMonthLabel" hidden>対象月 <select id="statsMonth"></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><p class="hint" id="ratingPanelContext"></p><label>ルール <select id="ratingMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><p class="hint">全期間の現在R。「すべて」は全ルールの半荘から計算する総合Rです。20半荘未満は暫定です。名前をタップすると個人成績が開き、表の下には選択期間のR推移が表示されます。</p><div class="rating-scroll"><table id="ratingTable" class="history-table"></table></div><div id="ratingTrend"></div></div><div id="totalsPanel" class="standings-scroll"><p class="hint" id="totalsPanelContext"></p><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div class="stats-filter"><label>対局者 <select id="historyPlayer"><option value="">すべて</option></select></label><label>ルール <select id="historyRule"><option value="">すべて</option><option value="normal">三人麻雀</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label></div><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleYonma" role="tab" aria-controls="playerStatsResults" data-mode="yonma">四人麻雀</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
 const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
 async function cloudRequest(path,{token,method='GET',data}={}){
   const headers={apikey:cloudKey};
@@ -193,7 +195,15 @@ function bindTableSort(id){
     $(id).tHead.querySelector('[data-sort-column="'+column+'"]').focus({preventScroll:true});
   };
 }
+function statsPeriodLabel(){
+  const period=$('statsPeriod');
+  const range=period.value==='monthly'?'（'+$('statsMonth').selectedOptions[0]?.textContent+'）':period.value==='range'?`（${$('statsFrom').value||'指定なし'} ～ ${$('statsTo').value||'指定なし'}）`:'';
+  return period.selectedOptions[0].textContent+range;
+}
 function renderStats(){
+  for(const [panel,select] of [['totalsPanel','totalsMode'],['ratingPanel','ratingMode']]){
+    $(panel+'Context').textContent=statsPeriodLabel()+' ・ '+$(select).selectedOptions[0].textContent;
+  }
   const current=editing?.current||state;
   const history=historyEntries();
   const matches=statsDateFilter();
@@ -209,7 +219,7 @@ function renderStats(){
     const ranked=r.ranks.reduce((sum,n)=>sum+n,0);
     const percent=n=>ranked?(100*n/ranked).toFixed(1)+'%':'—';
     const cells=[fmt(r.pt)+' pt',fmt(r.yen)+' pt',r.sets,r.rounds,fmt(r.chips),percent(r.ranks[0]),percent(r.lasts),...r.ranks.slice(0,rankCount)];
-    return `<tr><td><button class="player-stats-link" data-player-stats="${esc(r.id)}">${esc(r.name)}</button></td>${cells.map((v,i)=>`<td class="${(i<2||i===4)&&String(v).startsWith('-')?'negative':''}">${v}</td>`).join('')}</tr>`;
+    return `<tr><td><button class="player-stats-link" data-player-stats="${esc(r.id)}">${esc(r.name)}<span aria-hidden="true">›</span></button></td>${cells.map((v,i)=>`<td class="${(i<2||i===4)&&String(v).startsWith('-')?'negative':''}">${v}</td>`).join('')}</tr>`;
   }).join('')+'</tbody>';
   bindTableSort('statsTable');
   const reversed=$('statsPeriod').value==='range'&&$('statsFrom').value&&$('statsTo').value&&$('statsFrom').value>$('statsTo').value;
@@ -285,7 +295,7 @@ function renderRatings(sets,matches){
   const ratings=calculateRatings(sets,$('ratingMode').value);
   const rows=ratings.filter(p=>p.rankingVisible);
   $('ratingTable').innerHTML=sortedTable('ratingTable',['プレイヤー','現在R','対象半荘','直近'],rows,p=>[p.name,p.rating,p.history.length,p.change])+'<tbody>'+rows.map(p=>
-    `<tr><td><button type="button" class="player-stats-link" data-rating-player="${esc(p.id)}">${esc(p.name)}</button></td><td><b>${Math.round(p.rating)}</b>${p.history.length<20?' <small>暫定</small>':''}</td><td>${p.history.length}</td><td>${fmt(p.change)}</td></tr>`).join('')+'</tbody>';
+    `<tr><td><button type="button" class="player-stats-link" data-rating-player="${esc(p.id)}">${esc(p.name)}<span aria-hidden="true">›</span></button></td><td><b>${Math.round(p.rating)}</b>${p.history.length<20?' <small>暫定</small>':''}</td><td>${p.history.length}</td><td>${fmt(p.change)}</td></tr>`).join('')+'</tbody>';
   bindTableSort('ratingTable');
   const player=rows.find(p=>p.id===ratingPlayerId);
   const points=player?.history.filter(matches)||[];
@@ -318,7 +328,7 @@ $('ratingTable').onclick=e=>{
   if(!button)return;
   ratingPlayerId=button.dataset.ratingPlayer;
   renderRatings([...historyEntries().map(entry=>entry.set),editing?.current||state],statsDateFilter());
-  openPlayerStats(ratingPlayerId,button.textContent,$('ratingMode').value);
+  openPlayerStats(ratingPlayerId,button.firstChild.textContent,$('ratingMode').value);
 };
 let selectedPlayerId;
 let playerStatsMode='all';
@@ -467,19 +477,17 @@ function renderPlayerStats(){
 $('statsTable').onclick=e=>{
   const button=e.target.closest('[data-player-stats]');
   if(!button)return;
-  openPlayerStats(button.dataset.playerStats,button.textContent);
+  openPlayerStats(button.dataset.playerStats,button.firstChild.textContent);
 };
 function openPlayerStats(id,name,mode='all'){
   selectedPlayerId=id;
   $('playerStatsTitle').textContent=name+'の個人成績';
-  const period=$('statsPeriod');
-  const range=period.value==='monthly'?'（'+$('statsMonth').selectedOptions[0]?.textContent+'）':period.value==='range'?`（${$('statsFrom').value||'指定なし'} ～ ${$('statsTo').value||'指定なし'}）`:'';
-  $('playerStatsPeriod').textContent='集計期間 '+period.selectedOptions[0].textContent+range;
   selectPlayerStatsTab(mode);
   $('playerStatsDialog').showModal();
 }
 function selectPlayerStatsTab(mode){
   playerStatsMode=mode;
+  $('playerStatsPeriod').textContent=statsPeriodLabel()+' ・ '+(mode==='all'?'すべてのルール':mode==='trend'?'すべてのルール・推移':roundLabel(mode));
   for(const tab of $('playerStatsTabs').querySelectorAll('[role="tab"]')){
     const selected=tab.dataset.mode===mode;
     tab.classList.toggle('active',selected);
