@@ -6,6 +6,7 @@
 <title>たけちゃお公式ルールブック｜たけチャート</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f3f3f5;color:#171b21;font:16px/1.7 system-ui,sans-serif}main{max-width:760px;margin:auto;padding:16px}header,section,nav{border-radius:14px;padding:18px;margin:0 0 14px;background:#fff}header{background:#171b21;color:#fff;border-bottom:5px solid #c60027}h1,h2,p{margin:0 0 8px}h1{font-size:clamp(23px,6vw,35px);line-height:1.25}h2{font-size:21px}h3{font-size:17px;margin-bottom:4px}ul{margin:6px 0 12px;padding-left:1.4em}li+li{margin-top:4px}a{color:#a90022;text-underline-offset:3px}header a{color:#fff}nav{display:flex;flex-wrap:wrap;gap:8px 16px}img{width:100%;height:auto;display:block}.note{color:#555861;font-size:14px}.motto{font-weight:750;color:#a90022}
+.rule-text{white-space:pre-wrap;overflow-wrap:anywhere}.editor label{display:block;margin:12px 0}.editor textarea,.editor input{display:block;width:100%;font:inherit;padding:8px}.editor textarea{min-height:100px;resize:vertical}.editor summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body><main>
@@ -50,5 +51,88 @@
 <li>暴力団関係者、および原文で「そのような風貌の方」とされる方の入店はお断り。</li>
 </ul><p class="motto">勝ち負けよりも、愉快に楽しく麻雀をする。</p></section>
 <section id="scores"><h2>公式点数表</h2><a href="./takechao-score-table.png"><img src="./takechao-score-table.png" alt="たけちゃお公式3人打ち点数表。黒字はロン、赤字はツモ。" loading="lazy"></a></section>
-<footer class="note"><a href="https://github.com/taikechiuketa/mahjong-score/edit/main/rules.html">ルールブックを編集（管理者用）</a></footer>
-<section id="yonma-scores"><h2>4人打ち点数表（符計算あり）</h2><a href="./takechao-yonma-score-table.png" target="_blank" rel="noopener"><img src="./takechao-yonma-score-table.png" alt="四人打ち点数表（符計算あり）" loading="lazy" style="display:block;width:100%;height:auto"></a></section></main></body></html>
+
+<section id="yonma-scores"><h2>4人打ち点数表（符計算あり）</h2><a href="./takechao-yonma-score-table.png" target="_blank" rel="noopener"><img src="./takechao-yonma-score-table.png" alt="四人打ち点数表（符計算あり）" loading="lazy" style="display:block;width:100%;height:auto"></a></section><section class="editor"><details><summary>ルールブックを編集（管理者用）</summary>
+<p class="note">本文を編集して保存すると、閲覧者にも公開されます。保存には管理者のDBログインが必要です。</p>
+<form id="ruleEditor"><div id="ruleFields"></div><label>メール<input id="ruleEmail" type="email" autocomplete="username" required></label><label>パスワード<input id="rulePassword" type="password" autocomplete="current-password" required></label><button id="ruleSave" disabled>保存して公開</button></form>
+<p class="note" id="ruleStatus" role="status">編集データを確認中…</p></details></section></main>
+<script>
+const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
+const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
+const get=id=>document.getElementById(id);
+const rulePath='/rest/v1/takechao_rulebook?id=eq.1';
+const sections=['game','chips','penalties','manners'].map(id=>{
+  const section=get(id);
+  const heading=section.querySelector('h2');
+  const content=[...section.children].slice(1).map(node=>node.matches('ul')
+    ? [...node.children].map(li=>'・'+li.textContent.trim()).join('\n')
+    : node.textContent.trim()).join('\n\n');
+  const label=document.createElement('label');
+  label.textContent=heading.textContent;
+  const field=document.createElement('textarea');
+  field.required=true;
+  field.maxLength=5000;
+  field.value=content;
+  label.append(field);
+  get('ruleFields').append(label);
+  return {id,section,heading,field,content};
+});
+let revision;
+async function request(path,method='GET',data,token){
+  const headers={apikey:cloudKey};
+  if(token)headers.Authorization='Bearer '+token;
+  if(data)Object.assign(headers,{'Content-Type':'application/json',Prefer:'return=representation'});
+  const response=await fetch(cloudUrl+path,{method,headers,cache:'no-store',body:data?JSON.stringify(data):undefined});
+  if(!response.ok)throw Error('request');
+  return response.json();
+}
+function applyRules(body){
+  for(const {id,section,heading,field,content} of sections){
+    field.value=body?.[id]??content;
+    if(field.value===content&&!section.querySelector('.rule-text'))continue;
+    const paragraph=document.createElement('p');
+    paragraph.className='rule-text';
+    paragraph.textContent=field.value;
+    section.replaceChildren(heading,paragraph);
+  }
+}
+async function loadRules(){
+  try{
+    const [row]=await request(rulePath+'&select=body,revision');
+    if(!row?.revision)throw Error('setup');
+    revision=row.revision;
+    applyRules(row.body);
+    get('ruleSave').disabled=false;
+    get('ruleStatus').textContent='';
+  }catch{
+    get('ruleStatus').textContent='編集データを読み込めませんでした。初回はSupabaseでルールブックの保存先を設定してください。';
+  }
+}
+get('ruleEditor').onsubmit=async event=>{
+  event.preventDefault();
+  const button=get('ruleSave');
+  if(button.disabled||!revision)return;
+  const body=Object.fromEntries(sections.map(({id,field})=>[id,field.value.trim()]));
+  if(Object.values(body).some(text=>!text)){
+    get('ruleStatus').textContent='各項目の本文を入力してください。';
+    return;
+  }
+  if(!confirm('この内容でルールブックを公開しますか？'))return;
+  button.disabled=true;
+  get('ruleStatus').textContent='保存中…';
+  try{
+    const auth=await request('/auth/v1/token?grant_type=password','POST',{email:get('ruleEmail').value,password:get('rulePassword').value});
+    const [row]=await request(rulePath+'&revision=eq.'+encodeURIComponent(revision),'PATCH',{body,revision:crypto.randomUUID()},auth.access_token);
+    if(!row)throw Error('conflict');
+    revision=row.revision;
+    applyRules(row.body);
+    get('ruleStatus').textContent='保存して公開しました。';
+  }catch(error){
+    get('ruleStatus').textContent=error.message==='conflict'?'保存できませんでした。管理者権限または別の端末での更新を確認してください。':'保存できませんでした。ログイン情報や通信状況を確認してください。';
+  }finally{
+    get('rulePassword').value='';
+    button.disabled=false;
+  }
+};
+loadRules();
+</script></body></html>
