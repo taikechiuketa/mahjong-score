@@ -542,8 +542,10 @@ async function refresh(){
   if(loading)return;
   loading=true;
   try{
-    const [snapshot]=await cloudRequest('/rest/v1/takechao_public_results?id=eq.1&select=results,updated_at');
-    if(snapshot&&snapshot.updated_at===revision)return;
+    const path='/rest/v1/takechao_public_results?id=eq.1&select=results,updated_at';
+    const changed=revision==null?'':'&updated_at=neq.'+encodeURIComponent(revision);
+    const [snapshot]=await cloudRequest(path+changed);
+    if(!snapshot&&changed)return;
     const payload=snapshot?.results?.find(row=>row?.kind==='sets-v2');
     if(!payload){$('publicStatus').textContent='詳細成績は管理画面の次の自動同期後に表示されます。';return}
     published=payload.sets;
