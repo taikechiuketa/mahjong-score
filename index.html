@@ -59,6 +59,12 @@
 .sheet.settle th,.sheet.settle td{padding:4px 2px;text-align:center}
 .sheet.settle tbody th{top:auto}
 .sheet.settle input{width:100%;max-width:76px;text-align:center}
+
+.history-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.history-actions:empty{display:none}
+.history-actions button,.history-share{min-height:44px;padding:6px 8px;font-size:12px;white-space:nowrap}
+.history-share{display:inline-flex;align-items:center;gap:4px;color:inherit;border:1px solid currentColor;border-radius:10px;text-decoration:none}
+.history-share:hover{text-decoration:underline}
 </style></head><body><div id="saveToast" role="status" hidden></div><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header>
 <p><a href="./rules.html">公式ルールブック</a></p>
 <nav class="navtabs"><button id="tabSheet" class="active" type="button">スコアシート</button><button id="tabStats" class="secondary" type="button">通算成績・履歴</button></nav><div id="sheetPage"><section class="card"><div class="row"><div><h2>セット設定</h2><p class="hint" id="setNumber"></p></div><div class="buttons"><button class="secondary" id="cancelEdit" hidden>編集をやめる</button><button class="secondary" id="newSet">新しいセット</button></div></div><p class="hint" id="saveStatus" role="status"></p><details id="activeSetSettings"><summary>ポイント倍率・チップレート</summary><div class="settings"><label>ポイント倍率<input id="rate" type="number" min="0" step="1"></label><label>チップレート（pt/枚）<input id="chipRate" type="number" min="0" step="1"></label></div></details></section>
@@ -657,9 +663,9 @@ function renderStats(){
   $('historyList').innerHTML=filtered.length?filtered.map(({set,index})=>{
     const results=setResults(set);
     const label=index===null?(set.archiveId?'（進行中・保存済み）':'（進行中）'):'';
-    const edit=index===null||editing?'':`<button class="secondary" data-edit-history="${index}">このセットを編集</button>`;
-    const remove=index===null||editing?'':`<button type="button" class="danger" data-delete-history-set="${index}">セットを削除</button>`;
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove} ${index===null?'':setShareLink(set,history)}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
+    const edit=index===null||editing?'':`<button class="secondary" aria-label="このセットを編集" data-edit-history="${index}">編集</button>`;
+    const remove=index===null||editing?'':`<button type="button" class="danger" aria-label="セットを削除" data-delete-history-set="${index}">削除</button>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p><div class="history-actions">${edit}${remove}${index===null?'':setShareLink(set,history)}</div><table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
   }).join(''):'<p class="hint">条件に合うセットはありません。</p>';
   $('historyPlayer').onchange=$('historyRule').onchange=renderStats;
   $('historyList').onclick=e=>{
@@ -692,7 +698,7 @@ function setShareLink(set,entries){
   const key=String(set.sequence||1);
   if(entries.filter(entry=>entry.set.date===set.date&&String(entry.set.sequence||1)===key).length!==1)return '';
   const params=new URLSearchParams({date:set.date,set:key});
-  return `<a href="./results.html?${esc(params.toString())}">セット共有ページを開く</a>`;
+  return `<a class="history-share" href="./results.html?${esc(params.toString())}" aria-label="セット共有ページを開く"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 .5l4-4a5 5 0 0 0-7-7l-2 2m2 6a5 5 0 0 0-7-.5l-4 4a5 5 0 0 0 7 7l2-2"/></svg>共有ページ</a>`;
 }
 function calculateRatings(sets,mode){
   const players=new Map();
