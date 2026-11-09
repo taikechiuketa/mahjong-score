@@ -579,7 +579,7 @@ function renderStats(){
     const label=index===null?(set.archiveId?'（進行中・保存済み）':'（進行中）'):'';
     const edit=index===null||editing?'':`<button class="secondary" data-edit-history="${index}">このセットを編集</button>`;
     const remove=index===null||editing?'':`<button type="button" class="danger" data-delete-history-set="${index}">セットを削除</button>`;
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p>${edit} ${remove} ${index===null?'':setShareLink(set,history)}<table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
   }).join(''):'<p class="hint">条件に合うセットはありません。</p>';
   $('historyPlayer').onchange=$('historyRule').onchange=renderStats;
   $('historyList').onclick=e=>{
@@ -606,6 +606,13 @@ function renderStats(){
     }
     renderStats();
   };
+}
+function setShareLink(set,entries){
+  if(!set.date)return '';
+  const key=String(set.sequence||1);
+  if(entries.filter(entry=>entry.set.date===set.date&&String(entry.set.sequence||1)===key).length!==1)return '';
+  const params=new URLSearchParams({date:set.date,set:key});
+  return `<a href="./results.html?${esc(params.toString())}">セット共有ページを開く</a>`;
 }
 function calculateRatings(sets,mode){
   const players=new Map();
