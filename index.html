@@ -749,6 +749,44 @@ function renderPlayerTrends(sets){
       </svg></figure>`;
   }).join('');
 }
+function opponentStats(sets,mode,playerId){
+  const opponents=new Map();
+  for(const set of sets){
+    const identities=setResults(set,mode);
+    if(!identities.some(p=>p.id===playerId))continue;
+    for(const round of set.rounds){
+      const rule=roundRule(round.mode);
+      if(mode!=='all'&&mode!==rule)continue;
+      const played=set.players.flatMap((p,i)=>{
+        const score=round.scores?.[p.id];
+        if(score==null||score===''||score==='skip'||!Number.isInteger(Number(score)))return [];
+        return [{...identities[i],score:Number(score)}];
+      });
+      if(played.length!==roundSize(rule)||new Set(played.map(p=>p.id)).size!==played.length)continue;
+      const player=played.find(p=>p.id===playerId);
+      if(!player)continue;
+      for(const other of played){
+        if(other.id===playerId||!other.rankingVisible)continue;
+        const row=opponents.get(other.id)||{name:other.name,rounds:0,wins:0,losses:0,ties:0,points:0};
+        row.rounds++;
+        row.points+=player.score;
+        if(player.score>other.score)row.wins++;
+        else if(player.score<other.score)row.losses++;
+        else row.ties++;
+        opponents.set(other.id,row);
+      }
+    }
+  }
+  return [...opponents.values()].sort((a,b)=>b.rounds-a.rounds||a.name.localeCompare(b.name,'ja'));
+}
+function renderOpponentStats(sets,mode){
+  const rows=opponentStats(sets,mode,selectedPlayerId);
+  return '<details class="score-reference"><summary>対戦相手別の成績</summary>'+
+    '<p class="hint">同卓した半荘で、相手より得点が高ければ勝ち、同点は引き分け。勝率は勝ち数÷同卓数。必要人数の得点がそろった半荘を集計します。</p>'+
+    (rows.length?'<div style="overflow-x:auto"><table class="history-table" style="white-space:nowrap"><thead><tr><th>相手</th><th>同卓数</th><th>勝</th><th>負</th><th>分</th><th>勝率</th><th>自分の平均pt</th></tr></thead><tbody>'+
+      rows.map(r=>`<tr><th scope="row">${esc(r.name)}</th><td>${r.rounds}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.ties}</td><td>${(r.wins*100/r.rounds).toFixed(1)}%</td><td>${(r.points/r.rounds).toFixed(1)}</td></tr>`).join('')+
+      '</tbody></table></div>':'<p class="hint">この条件で集計できる対戦相手はいません。</p>')+'</details>';
+}
 function renderPlayerStats(){
   const current=editing?.current||state;
   const matches=statsDateFilter();
@@ -814,7 +852,7 @@ function renderPlayerStats(){
     ['着順内訳',totals.ranks.slice(0,mode==='normal'?3:4).map((n,i)=>`${i+1}着 ${n}回`).join(' ／ ')]
   );
   $('playerStatsResults').innerHTML='<table class="history-table"><tbody>'+metrics.map(([label,result,metric,ascending])=>
-    `<tr><th scope="row">${label}</th>${metric?`<td class="metric-value">${result}</td><td class="metric-rank">${placement(metric,ascending)}</td>`:`<td class="rank-breakdown" colspan="2">${result}</td>`}</tr>`).join('')+'</tbody></table>';
+    `<tr><th scope="row">${label}</th>${metric?`<td class="metric-value">${result}</td><td class="metric-rank">${placement(metric,ascending)}</td>`:`<td class="rank-breakdown" colspan="2">${result}</td>`}</tr>`).join('')+'</tbody></table>'+renderOpponentStats(sets,mode);
 }
 $('statsTable').onclick=e=>{
   const button=e.target.closest('[data-player-stats]');
