@@ -7,6 +7,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f3f3f5;color:#171b21;font:16px/1.7 system-ui,sans-serif}main{max-width:760px;margin:auto;padding:16px}header,section,nav{border-radius:14px;padding:18px;margin:0 0 14px;background:#fff}header{background:#171b21;color:#fff;border-bottom:5px solid #c60027}h1,h2,p{margin:0 0 8px}h1{font-size:clamp(23px,6vw,35px);line-height:1.25}h2{font-size:21px}h3{font-size:17px;margin-bottom:4px}ul{margin:6px 0 12px;padding-left:1.4em}li+li{margin-top:4px}a{color:#a90022;text-underline-offset:3px}header a{color:#fff}nav{display:flex;flex-wrap:wrap;gap:8px 16px}img{width:100%;height:auto;display:block}.note{color:#555861;font-size:14px}.motto{font-weight:750;color:#a90022}
 .rule-text{white-space:pre-wrap;overflow-wrap:anywhere}.editor label{display:block;margin:12px 0}.editor textarea,.editor input{display:block;width:100%;font:inherit;padding:8px}.editor textarea{min-height:100px;resize:vertical}.editor summary{cursor:pointer;font-weight:700}
+.rule-red{color:#a90022}.rule-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rule-toolbar button{padding:5px 9px}.rule-preview{background:#f3f3f5;border-radius:8px;padding:10px;margin-bottom:16px}.rule-preview>summary{font-size:14px}.rule-text{margin:0;min-height:1em}
 </style>
 </head>
 <body><main>
@@ -61,12 +62,88 @@ const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
 const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
 const get=id=>document.getElementById(id);
 const rulePath='/rest/v1/takechao_rulebook?id=eq.1';
+const inlineTags={b:['strong',''],i:['em',''],u:['u',''],red:['span','rule-red']};
+function appendInline(parent,text){
+  const stack=[{node:parent,tag:''}];
+  for(const token of text.split(/(\[\/?(?:b|i|u|red)\])/g)){
+    const current=stack.at(-1);
+    const match=/^\[(\/?)(b|i|u|red)\]$/.exec(token);
+    if(match&&!match[1]){
+      const [name,className]=inlineTags[match[2]];
+      const node=document.createElement(name);
+      node.className=className;
+      current.node.append(node);
+      stack.push({node,tag:match[2]});
+    }else if(match&&current.tag===match[2]){
+      stack.pop();
+    }else current.node.append(token);
+  }
+}
+function renderRuleText(text){
+  const fragment=document.createDocumentFragment();
+  let list;
+  for(const line of text.split(/\r?\n/)){
+    const bullet=/^(?:・\s*|-\s+)/.exec(line);
+    const numbered=/^\d+\.\s+/.exec(line);
+    if(bullet||numbered){
+      const tag=bullet?'ul':'ol';
+      if(list?.localName!==tag){
+        list=document.createElement(tag);
+        fragment.append(list);
+      }
+      const item=document.createElement('li');
+      appendInline(item,line.slice((bullet||numbered)[0].length));
+      list.append(item);
+      continue;
+    }
+    list=null;
+    const heading=line.startsWith('### ');
+    const node=document.createElement(heading?'h3':'p');
+    node.className='rule-text';
+    appendInline(node,heading?line.slice(4):line||'\u00a0');
+    fragment.append(node);
+  }
+  return fragment;
+}
+function addToolbar(container,field){
+  const controls=[
+    ['太字','b'],['赤字','red'],['斜体','i'],['下線','u'],
+    ['見出し','### '],['箇条書き','- '],['番号付き','1. '],['書式解除','']
+  ];
+  const toolbar=document.createElement('div');
+  toolbar.className='rule-toolbar';
+  for(const [label,format] of controls){
+    const button=document.createElement('button');
+    button.type='button';
+    button.textContent=label;
+    button.onclick=()=>{
+      let start=field.selectionStart,end=field.selectionEnd;
+      if(!format||format.endsWith(' ')){
+        start=field.value.lastIndexOf('\n',start-1)+1;
+        const next=field.value.indexOf('\n',end);
+        end=next<0?field.value.length:next;
+      }
+      const selected=field.value.slice(start,end);
+      const unmarked=selected.replace(/^(?:### |- |・|\d+\. )/gm,'');
+      const next=!format?unmarked.replace(/\[\/?(?:b|i|u|red)\]/g,'')
+        :format.endsWith(' ')?unmarked.split('\n').map(line=>format+line).join('\n')
+        :selected.split('\n').map(line=>'['+format+']'+line+'[/'+format+']').join('\n');
+      if(field.value.length-(end-start)+next.length>field.maxLength)return;
+      field.setRangeText(next,start,end,'select');
+      if(format&&!format.endsWith(' ')&&!selected.includes('\n'))field.setSelectionRange(start+format.length+2,start+format.length+2+selected.length);
+      field.focus();
+      field.dispatchEvent(new Event('input'));
+    };
+    toolbar.append(button);
+  }
+  container.append(toolbar);
+}
 const sections=['game','chips','penalties','manners'].map(id=>{
   const section=get(id);
   const heading=section.querySelector('h2');
   const content=[...section.children].slice(1).map(node=>node.matches('ul')
     ? [...node.children].map(li=>'・'+li.textContent.trim()).join('\n')
-    : node.textContent.trim()).join('\n\n');
+    : node.matches('h3')?'### '+node.textContent.trim():node.matches('.motto')?'[red][b]'+node.textContent.trim()+'[/b][/red]':node.textContent.trim()).join('\n\n');
   const label=document.createElement('label');
   label.textContent=heading.textContent;
   const field=document.createElement('textarea');
@@ -74,8 +151,19 @@ const sections=['game','chips','penalties','manners'].map(id=>{
   field.maxLength=5000;
   field.value=content;
   label.append(field);
-  get('ruleFields').append(label);
-  return {id,section,heading,field,content};
+  const preview=document.createElement('details');
+  preview.className='rule-preview';
+  const summary=document.createElement('summary');
+  summary.textContent='プレビュー';
+  const output=document.createElement('div');
+  preview.append(summary,output);
+  const updatePreview=()=>output.replaceChildren(renderRuleText(field.value));
+  field.addEventListener('input',updatePreview);
+  const container=get('ruleFields');
+  addToolbar(container,field);
+  container.append(label,preview);
+  updatePreview();
+  return {id,section,heading,field,content,updatePreview,original:[...section.children].slice(1)};
 });
 let revision;
 async function request(path,method='GET',data,token){
@@ -87,13 +175,11 @@ async function request(path,method='GET',data,token){
   return response.json();
 }
 function applyRules(body){
-  for(const {id,section,heading,field,content} of sections){
+  for(const {id,section,heading,field,content,updatePreview,original} of sections){
     field.value=body?.[id]??content;
-    if(field.value===content&&!section.querySelector('.rule-text'))continue;
-    const paragraph=document.createElement('p');
-    paragraph.className='rule-text';
-    paragraph.textContent=field.value;
-    section.replaceChildren(heading,paragraph);
+    updatePreview();
+    if(field.value===content)section.replaceChildren(heading,...original);
+    else section.replaceChildren(heading,renderRuleText(field.value));
   }
 }
 async function loadRules(){
