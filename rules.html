@@ -10,7 +10,7 @@
 .rule-red{color:#a90022}.rule-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rule-toolbar button{padding:5px 9px}.rule-preview{background:#f3f3f5;border-radius:8px;padding:10px;margin-bottom:16px}.rule-preview>summary{font-size:14px}.rule-text{margin:0;min-height:1em}
 </style>
 </head>
-<body><main>
+<body><script src="./data-safety.js"></script><main>
 <header><p><a href="./">たけチャートへ戻る</a></p><h1>たけちゃお公式ルールブック</h1><p>三人打ち｜第1版・2026年9月28日</p></header>
 <nav aria-label="目次"><a href="#game">対局ルール</a><a href="#chips">チップ</a><a href="#penalties">ペナルティ</a><a href="#manners">マナー</a><a href="#scores">3人打ち点数表</a><a href="#yonma-scores">4人打ち点数表</a></nav>
 <section id="game"><h2>対局ルール</h2>
@@ -54,8 +54,8 @@
 <section id="scores"><h2>公式点数表</h2><a href="./takechao-score-table.png"><img src="./takechao-score-table.png" alt="たけちゃお公式3人打ち点数表。黒字はロン、赤字はツモ。" loading="lazy"></a></section>
 
 <section id="yonma-scores"><h2>4人打ち点数表（符計算あり）</h2><a href="./takechao-yonma-score-table.png" target="_blank" rel="noopener"><img src="./takechao-yonma-score-table.png" alt="四人打ち点数表（符計算あり）" loading="lazy" style="display:block;width:100%;height:auto"></a></section><section class="editor"><details><summary>ルールブックを編集（管理者用）</summary>
-<p class="note">本文を編集して保存すると、閲覧者にも公開されます。保存には管理者のDBログインが必要です。</p>
-<form id="ruleEditor"><div id="ruleFields"></div><label>メール<input id="ruleEmail" type="email" autocomplete="username" required></label><label>パスワード<input id="rulePassword" type="password" autocomplete="current-password" required></label><button id="ruleSave" disabled>保存して公開</button></form>
+<p class="note">本文を編集して保存すると、閲覧者にも公開されます。記録画面のログインを共通で利用します。</p>
+<form id="ruleEditor"><div id="ruleFields"></div><p id="ruleAuthStatus" class="note">ログイン状態を確認中…</p><p><a href="./">記録画面でログインする</a></p><button id="ruleSave" disabled>保存して公開</button></form>
 <p class="note" id="ruleStatus" role="status">編集データを確認中…</p></details></section></main>
 <script>
 const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
@@ -166,11 +166,13 @@ const sections=['game','chips','penalties','manners'].map(id=>{
   return {id,section,heading,field,content,updatePreview,original:[...section.children].slice(1)};
 });
 let revision;
+let ruleAuthToken,ruleAuthExpiry=0;
+const ruleOwner='805a1a29-f048-4dc4-9671-93155fb13d2c';
 async function request(path,method='GET',data,token){
   const headers={apikey:cloudKey};
   if(token)headers.Authorization='Bearer '+token;
   if(data)Object.assign(headers,{'Content-Type':'application/json',Prefer:'return=representation'});
-  const response=await fetch(cloudUrl+path,{method,headers,cache:'no-store',body:data?JSON.stringify(data):undefined});
+  const response=await fetch(cloudUrl+path,{method,headers,cache:'no-store',signal:AbortSignal.timeout(20000),body:data?JSON.stringify(data):undefined});
   if(!response.ok)throw Error('request');
   return response.json();
 }
@@ -188,7 +190,7 @@ async function loadRules(){
     if(!row?.revision)throw Error('setup');
     revision=row.revision;
     applyRules(row.body);
-    get('ruleSave').disabled=false;
+    get('ruleSave').disabled=!ruleAuthToken;
     get('ruleStatus').textContent='';
   }catch{
     get('ruleStatus').textContent='編集データを読み込めませんでした。初回はSupabaseでルールブックの保存先を設定してください。';
@@ -207,8 +209,13 @@ get('ruleEditor').onsubmit=async event=>{
   button.disabled=true;
   get('ruleStatus').textContent='保存中…';
   try{
-    const auth=await request('/auth/v1/token?grant_type=password','POST',{email:get('ruleEmail').value,password:get('rulePassword').value});
-    const [row]=await request(rulePath+'&revision=eq.'+encodeURIComponent(revision),'PATCH',{body,revision:crypto.randomUUID()},auth.access_token);
+    await TakechartSafety.ready;
+    if(Date.now()+60000>=ruleAuthExpiry)await resumeRuleAuth();
+    if(!ruleAuthToken)throw Error('auth');
+    const [before]=await request(rulePath+'&select=body,revision');
+    if(before?.revision!==revision)throw Error('conflict');
+    await TakechartSafety.checkpoint('rulebook-before-write',before,revision);
+    const [row]=await request(rulePath+'&revision=eq.'+encodeURIComponent(revision),'PATCH',{body,revision:crypto.randomUUID()},ruleAuthToken);
     if(!row)throw Error('conflict');
     revision=row.revision;
     applyRules(row.body);
@@ -216,9 +223,23 @@ get('ruleEditor').onsubmit=async event=>{
   }catch(error){
     get('ruleStatus').textContent=error.message==='conflict'?'保存できませんでした。管理者権限または別の端末での更新を確認してください。':'保存できませんでした。ログイン情報や通信状況を確認してください。';
   }finally{
-    get('rulePassword').value='';
-    button.disabled=false;
+    button.disabled=!ruleAuthToken;
   }
 };
-loadRules();
+async function resumeRuleAuth(){
+  const renew=async()=>{
+    const session=JSON.parse(localStorage.getItem('takechao-cloud-session-v1')||'null');
+    if(!session?.refresh)throw Error('auth');
+    const auth=await request('/auth/v1/token?grant_type=refresh_token','POST',{refresh_token:session.refresh});
+    if(auth.user?.id!==ruleOwner)throw Error('owner');
+    ruleAuthToken=auth.access_token;ruleAuthExpiry=Date.now()+auth.expires_in*1000;
+    localStorage.setItem('takechao-cloud-session-v1',JSON.stringify({...session,refresh:auth.refresh_token}));
+    get('ruleAuthStatus').textContent='記録用アカウントでログイン中';
+    get('ruleSave').disabled=!revision;
+  };
+  try{if(navigator.locks)await navigator.locks.request('takechart-auth-refresh',renew);else await renew();}
+  catch{ruleAuthToken=undefined;get('ruleSave').disabled=true;get('ruleAuthStatus').textContent='編集するには記録画面でログインしてください。';}
+}
+window.addEventListener('storage',event=>{if(event.key==='takechao-cloud-session-v1'&&!event.newValue){ruleAuthToken=undefined;get('ruleSave').disabled=true;get('ruleAuthStatus').textContent='ログアウトしました。';}});
+loadRules();resumeRuleAuth();
 </script></body></html>

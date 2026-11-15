@@ -1,0 +1,11 @@
+{
+  "name": "takechart",
+  "private": true,
+  "scripts": {
+    "test": "node tests/auth-safety.test.cjs && node tests/rules-auth.test.cjs"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.8",
+    "jsdom": "31.0.1"
+  }
+}
