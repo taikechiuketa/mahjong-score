@@ -1,0 +1,74 @@
+/* Community storage is separate from score/auth storage. No score credentials leave this page. */
+(()=>{'use strict';
+const API='https://takechart-community.finepumpkin4.chatgpt.site/api/community';
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const NAME='takechart-community-name-v1',TOKEN='takechart-community-device-v1',PUSH='takechart-community-push-v1';
+const rules={normal:'三麻',north:'四人三麻',yonma:'四麻',undecided:'未定'};
+let token,events=[],selected=null,page='list',editing=null,busy=false,pushBusy=false,detailGeneration=0,lastMessages='';
+function status(text){$('globalStatus').textContent=text;}
+function storedName(){return localStorage.getItem(NAME)||'';}
+function rememberName(value){const name=value.trim();if(!name||name.length>24)throw Error('表示名を1〜24文字で入力してください。');localStorage.setItem(NAME,name);return name;}
+async function api(path,method='GET',body){
+ const response=await fetch(API+path,{method,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store',signal:AbortSignal.timeout(20000)});
+ const data=await response.json().catch(()=>({error:'サーバーの応答を確認できません。'}));if(!response.ok)throw Error(data.error||'接続に失敗しました。');return data;
+}
+function navigate(next){page=next;detailGeneration++;['list','detail','form','notifications'].forEach(p=>$(p+'Page').hidden=p!==next);status('');window.scrollTo(0,0);}
+function setUrl(id){const url=new URL(location.href);if(id)url.searchParams.set('event',id);else url.searchParams.delete('event');history.replaceState(null,'',url);}
+function day(date){return new Intl.DateTimeFormat('ja-JP',{month:'long',day:'numeric',weekday:'short',timeZone:'Asia/Tokyo'}).format(new Date(date+'T12:00:00+09:00'));}
+function today(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo'}).format(new Date());}
+function state(e){return e.closed?'締切済み':e.remaining===0?'満員':'あと'+e.remaining+'人募集中';}
+function seats(e){return `<div class="seats"><span>${esc(e.name)}（募集者）</span>${e.existing>1?'<span>決まっている仲間 '+(e.existing-1)+'人</span>':''}${e.participants.map(p=>`<span>${esc(p.name)}${p.mine?'（あなた）':''}</span>`).join('')}${!e.closed&&e.remaining?`<span class="empty">あと${e.remaining}人</span>`:''}</div>`;}
+function renderList(){
+ const visible=events.filter(e=>$('showPast').checked||(!e.closed&&e.date>=today())).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
+ $('eventList').innerHTML=visible.length?visible.map(e=>`<article class="card"><div class="heading"><span class="tag ${e.closed||!e.remaining?'closed':''}">${state(e)}</span><span class="hint">${rules[e.rule]}</span></div><h3 class="event-title">${esc(e.title)}</h3><div class="event-meta"><span>${day(e.date)} ${e.start||'時間未定'}${e.end?'〜'+e.end:''}</span><span>${esc(e.place)}</span></div>${seats(e)}<p class="hint">${e.joined?'参加予定 · ':''}${e.mine?'あなたの募集':'募集者：'+esc(e.name)}</p><button type="button" data-open="${e.id}" class="wide">詳細・チャットを開く</button></article>`).join(''):'<section class="card"><h3>現在、募集中の予定はありません</h3><p class="hint">「＋ 募集する」から、仲間に声をかけてみましょう。</p></section>';
+ $('eventList').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEvent(b.dataset.open));
+}
+async function loadList(quiet=false){try{const result=await api('/events');events=result.events;if(page==='list')renderList();if(!quiet)status('');}catch(e){if(!quiet)status(e.message);}}
+function renderDetail(e){
+ $('eventDetail').innerHTML=`<section class="card"><span class="tag ${e.closed||!e.remaining?'closed':''}">${state(e)}</span><h2 class="event-title" style="margin-top:12px">${esc(e.title)}</h2><p class="hint">募集者：${esc(e.name)}${e.mine?'（あなた）':''}</p><dl><div><dt>日時</dt><dd>${day(e.date)}<br>${e.start||'時間未定'}${e.end?'〜'+e.end:''}</dd></div><div><dt>場所</dt><dd>${esc(e.place)}</dd></div><div><dt>ルール</dt><dd>${rules[e.rule]}</dd></div><div><dt>人数</dt><dd>${e.existing+e.participants.length}人参加予定／${e.existing+e.vacancies}人</dd></div></dl>${seats(e)}${e.note?'<p style="white-space:pre-wrap">'+esc(e.note)+'</p>':''}<div class="buttons">${e.mine?'<button id="editEvent">募集内容を編集</button><button id="toggleClosed" class="secondary">'+(e.closed?'募集を再開する':'募集を締め切る')+'</button>':e.joined?'<button id="leaveEvent" class="secondary">参加を取り消す</button>':!e.closed&&e.remaining?'<button id="joinEvent">この募集に参加する</button>':''}<button id="shareEvent" class="secondary">募集リンクをコピー</button></div><p id="actionStatus" role="status"></p></section>`;
+ $('followChat').checked=e.following;
+ $('chatNotificationHint').textContent='端末の通知もONにしてください。参加・募集したときは、この募集の新着通知が自動でONになります。';
+ if($('joinEvent'))$('joinEvent').onclick=()=>action(async()=>{const name=rememberName($('chatName').value);await api('/events/'+e.id+'/join','POST',{name});});
+ if($('leaveEvent'))$('leaveEvent').onclick=()=>{if(confirm('この募集への参加を取り消しますか？'))action(()=>api('/events/'+e.id+'/join','DELETE'));};
+ if($('editEvent'))$('editEvent').onclick=()=>openForm(e);
+ if($('toggleClosed'))$('toggleClosed').onclick=()=>action(()=>api('/events/'+e.id,'PATCH',{...e,closed:!e.closed}));
+ $('shareEvent').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('actionStatus').textContent='募集リンクをコピーしました。';}catch{$('actionStatus').textContent='このページのURLをコピーして共有してください。';}};
+}
+async function loadDetail(id,quiet=false){const gen=detailGeneration;
+ try{const [e,chat]=await Promise.all([api('/events/'+id),api('/events/'+id+'/messages')]);if(page!=='detail'||gen!==detailGeneration)return;selected=e;renderDetail(e);const serialized=JSON.stringify(chat.messages);
+ if(serialized!==lastMessages){lastMessages=serialized;$('messages').innerHTML=chat.messages.map(m=>`<article class="chat-message ${m.mine?'mine':''}"><div class="chat-meta"><span><b>${esc(m.name)}</b> ${m.host?'〈募集者〉':''}${m.mine?'〈あなた〉':''} · ${new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Tokyo'}).format(m.created)}</span>${m.canDelete?'<button class="text" type="button" data-delete="'+m.id+'">削除</button>':''}</div><p>${esc(m.body)}</p></article>`).join('');$('messages').querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(confirm('この投稿を削除しますか？'))action(()=>api('/events/'+id+'/messages','DELETE',{id:b.dataset.delete}));});}
+ if(!quiet)status('');
+ }catch(e){if(!quiet)status(e.message);}}
+async function openEvent(id){selected={id};lastMessages='';$('eventDetail').replaceChildren();$('messages').replaceChildren();$('chatName').value=storedName();$('chatBody').value='';$('chatStatus').textContent='';navigate('detail');setUrl(id);await loadDetail(id);}
+async function action(fn){if(busy)return;busy=true;const id=selected.id;$('eventDetail').querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();await loadDetail(id);}catch(e){status(e.message);}finally{busy=false;$('eventDetail').querySelectorAll('button').forEach(b=>b.disabled=false);}}
+function openForm(e=null){editing=e;navigate('form');$('eventForm').reset();$('formStatus').textContent='';$('formTitle').textContent=e?'募集内容を編集':'新しく募集する';$('publishEvent').textContent=e?'変更を保存する':'募集を公開する';$('notifyLabel').hidden=$('notifyHelp').hidden=!!e;const form=$('eventForm');const data=e||{name:storedName(),date:today(),place:'たけちゃお',title:'',start:'',end:'',note:'',rule:'normal',vacancies:2,existing:1};for(const key of ['name','title','date','start','end','place','rule','vacancies','existing','note']){const field=form.elements.namedItem(key);if(field instanceof HTMLSelectElement&&!Array.from(field.options).some(o=>o.value===String(data[key]))){field.add(new Option(String(data[key])+'人',String(data[key])));}field.value=data[key];}}
+$('eventForm').onsubmit=async event=>{event.preventDefault();if(busy)return;busy=true;$('publishEvent').disabled=true;$('formStatus').textContent='保存しています…';try{const form=$('eventForm'),data=Object.fromEntries(new FormData(form));data.name=rememberName(data.name);data.vacancies=Number(data.vacancies);data.existing=Number(data.existing);data.notify=form.elements.namedItem('notify').checked;let id;if(editing){id=editing.id;await api('/events/'+id,'PATCH',{...data,version:editing.version,closed:editing.closed});}else{id=(await api('/events','POST',data)).id;}await openEvent(id);}catch(e){$('formStatus').textContent=e.message;}finally{busy=false;$('publishEvent').disabled=false;}};
+$('chatForm').onsubmit=async event=>{event.preventDefault();if(busy||!selected)return;busy=true;const button=$('chatForm').querySelector('button');button.disabled=true;const id=selected.id;try{const name=rememberName($('chatName').value);await api('/events/'+id+'/messages','POST',{name,body:$('chatBody').value});$('chatBody').value='';$('chatStatus').textContent='送信しました。';await loadDetail(id);}catch(e){$('chatStatus').textContent=e.message;}finally{busy=false;button.disabled=false;}};
+$('followChat').onchange=async()=>{if(!selected)return;const enabled=$('followChat').checked;try{await api('/events/'+selected.id+'/follow','POST',{enabled});status(enabled?'この募集の新着通知をONにしました。端末の通知もONにしてください。':'この募集の新着通知をOFFにしました。');}catch(e){$('followChat').checked=!enabled;status(e.message);}};
+$('newEvent').onclick=()=>openForm();$('showPast').onchange=renderList;$('refreshEvents').onclick=()=>loadList();$('refreshChat').onclick=()=>selected&&loadDetail(selected.id);
+function toList(){navigate('list');setUrl(null);loadList();} $('backToList').onclick=$('closeNotifications').onclick=toList;
+$('cancelForm').onclick=()=>{if(editing)openEvent(editing.id);else toList();};
+const guides={iphone:'<h3>iPhone・iPad</h3><ol><li>iOS／iPadOS 16.4以降が必要です。Safariで竹チャートの閲覧ページを開きます。</li><li>共有メニューから「ホーム画面に追加」を選びます。「Webアプリとして開く」がある場合はONにします。</li><li>ホーム画面に追加した「たけチャート」を開き、「参加募集」→「通知設定・ガイド」に進みます。</li><li>「募集通知をONにする」を押し、端末の確認で「許可」を選びます。</li><li>「テスト通知を送る」で動作確認します。</li></ol><p class="hint">許可しなかった場合は、端末の「設定」→「通知」から追加したアプリを探して通知を許可してください。見つからなければホーム画面に追加したアプリ内で登録し直してください。</p>',android:'<h3>Android</h3><ol><li>ChromeなどWeb通知に対応したブラウザで竹チャートを開きます。</li><li>必要ならブラウザメニューの「ホーム画面に追加」または「アプリをインストール」を選びます。</li><li>「参加募集」→「通知設定・ガイド」→「募集通知をONにする」を押します。</li><li>ブラウザ・Androidの確認で通知を許可します。</li><li>「テスト通知を送る」で確認します。</li></ol><p class="hint">ブロックしている場合は、Chromeの「設定」→「サイトの設定」→「通知」でこのサイトを許可します。端末の「設定」→「アプリ」→利用ブラウザや竹チャート→「通知」も確認してください。</p>',other:'<h3>パソコン・その他</h3><ol><li>Chrome・Edge・Firefox・Safariなど、Web通知対応ブラウザで開きます。</li><li>「募集通知をONにする」を押し、通知を許可します。</li><li>「テスト通知を送る」で確認します。</li></ol><p class="hint">ブラウザとOS両方の通知設定を確認してください。非対応ブラウザでも、募集一覧とチャットは利用できます。</p>'};
+function guide(kind){$('guideContent').innerHTML=guides[kind];document.querySelectorAll('[data-guide]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.guide===kind)));}
+document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>guide(b.dataset.guide));
+const iphone=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+guide(iphone?'iphone':/Android/.test(navigator.userAgent)?'android':'other');
+async function registration(){if(!('serviceWorker'in navigator))throw Error('このブラウザは通知に対応していません。');await navigator.serviceWorker.register('./community-sw.js',{scope:'./'});return navigator.serviceWorker.ready;}
+async function pushState(){try{if(!('Notification'in window)||!('PushManager'in window)){$('pushStatus').textContent=iphone?'ホーム画面に追加したアプリから開いてください。':'このブラウザはプッシュ通知に対応していません。';return;}const reg=await registration(),sub=await reg.pushManager.getSubscription();$('pushStatus').textContent=Notification.permission==='denied'?'通知がブロックされています。下のガイドから端末・ブラウザ設定を確認してください。':sub&&localStorage.getItem(PUSH)==='on'?'この端末の募集通知：ON':'この端末の募集通知：OFF';}catch(e){$('pushStatus').textContent=e.message;}}
+$('openNotifications').onclick=()=>{navigate('notifications');setUrl(null);pushState();};
+function pushButtons(disabled){pushBusy=disabled;['enablePush','disablePush','testPush'].forEach(id=>$(id).disabled=disabled);}
+$('enablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{
+ if(!('Notification'in window)||!('PushManager'in window))throw Error(iphone?'先にホーム画面に追加し、そのアイコンから開いてください。':'Web通知対応のブラウザで開いてください。');
+ // Permission prompt starts directly in the user gesture, before network work.
+ const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(permission!=='granted')throw Error('通知が許可されませんでした。設定ガイドを確認してください。');
+ const [reg,config]=await Promise.all([registration(),api('/config')]);if(!config.publicKey)throw Error('通知サービスを準備中です。');
+ let sub=await reg.pushManager.getSubscription();if(!sub){const raw=atob(config.publicKey.replace(/-/g,'+').replace(/_/g,'/'));sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});}
+ await api('/subscription','POST',{subscription:sub.toJSON(),recruit:true});localStorage.setItem(PUSH,'on');await pushState();
+ }catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+$('disablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(sub){await api('/subscription','DELETE',{endpoint:sub.endpoint});if(!await sub.unsubscribe())throw Error('端末の通知解除を確認できません。もう一度お試しください。');}localStorage.setItem(PUSH,'off');await pushState();}catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+$('testPush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(!sub||localStorage.getItem(PUSH)!=='on')throw Error('先に募集通知をONにしてください。');await api('/test','POST',{endpoint:sub.endpoint});$('pushStatus').textContent='通知サービスに送信しました。端末に表示されるか確認してください。';}catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+try{token=localStorage.getItem(TOKEN);if(!/^[a-f0-9]{64}$/.test(token||'')){token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem(TOKEN,token);}if(localStorage.getItem(TOKEN)!==token)throw Error('保存できません');const id=new URL(location.href).searchParams.get('event');if(id)openEvent(id);else loadList();}catch{status('端末にデータを保存できません。ブラウザの保存設定を確認してください。');document.querySelectorAll('button,input,select,textarea').forEach(e=>e.disabled=true);}
+setInterval(()=>{if(document.hidden||busy)return;if(page==='detail'&&selected)loadDetail(selected.id,true);},5000);
+setInterval(()=>{if(!document.hidden&&!busy&&page==='list')loadList(true);},15000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!busy){if(page==='detail'&&selected)loadDetail(selected.id);else if(page==='list')loadList();}});
+})();

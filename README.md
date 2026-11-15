@@ -8,6 +8,8 @@
 - [閲覧専用の成績ページ](https://taikechiuketa.github.io/mahjong-score/results.html)
 - [たけちゃお公式ルールブック・点数表](https://taikechiuketa.github.io/mahjong-score/rules.html)
 
+- [参加募集・チャット（ログイン不要）](https://taikechiuketa.github.io/mahjong-score/community.html)
+
 ## ドキュメント
 
 - [画面説明・使い方](docs/screen-guide.md)
