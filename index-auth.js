@@ -294,7 +294,7 @@ $('recoveryInfo').after(recoveryControls);
 let recoveryCandidates=[];
 $('listRecovery').onclick=async()=>{
   try {
-    const labels={'before-redesign':'改修前の端末データ','before-cloud-load':'読み込み前の端末データ','cloud':'DBの保存データ','device-before-login':'ログイン前の端末データ','local-selected':'選択した端末データ','cloud-before-write':'送信前のDBデータ','device-before-write':'送信前の端末データ','device-conflict':'競合時の端末データ','cloud-conflict':'競合時のDBデータ','before-logout':'ログアウト前','manual-export':'書き出し時','before-device-recovery':'復元前の端末データ','before-backup-restore':'バックアップ復元前'};
+    const labels={'before-redesign':'改修前の端末データ','before-cloud-load':'読み込み前の端末データ','cloud':'DBの保存データ','device-before-login':'ログイン前の端末データ','local-selected':'選択した端末データ','cloud-before-write':'送信前のDBデータ','device-before-write':'送信前の端末データ','device-conflict':'競合時の端末データ','cloud-conflict':'競合時のDBデータ','before-logout':'ログアウト前','manual-export':'書き出し時','before-device-recovery':'復元前の端末データ','before-backup-restore':'バックアップ復元前','before-set-identity-edit':'日付・番号の変更前'};
     recoveryCandidates=(await safety.all()).filter(record=>{try{return Boolean(record.kind&&checkData(recoveryData(record)))}catch{return false}}).sort((a,b)=>String(b.savedAt).localeCompare(String(a.savedAt)));
     $('recoverySelection').replaceChildren(...recoveryCandidates.map(record=>new Option(`${new Date(record.savedAt).toLocaleString('ja-JP')} ／ ${recoveryData(record).history.length}セット ／ ${labels[record.kind]||'保護したデータ'}`,record.id)));
     if(!recoveryCandidates.length)$('recoveryInfo').textContent='復元できるコピーはまだありません。';

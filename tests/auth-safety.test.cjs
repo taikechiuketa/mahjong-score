@@ -47,6 +47,7 @@ async function app({local,server=fixture(),session=true,fail,baseline,denyBackup
   const inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
   for(const code of inline)vm.runInContext(code,dom.getInternalVMContext());
   vm.runInContext(fs.readFileSync('index-auth.js','utf8'),dom.getInternalVMContext());
+  vm.runInContext(fs.readFileSync('set-identity.js','utf8'),dom.getInternalVMContext());
   await settle(w);
   return {w,dom,writes,calls,errors,remote:()=>remote,public:()=>publicRow,setRemote:d=>remote=d};
 }
@@ -70,6 +71,50 @@ test('端末保存失敗時はDBロードを開始前の値へ戻す',async()=>{
 test('復旧コピーから端末に戻してもDBへ自動送信しない',async()=>{const a=await app();const old=fixture();old.history.push({...structuredClone(set),archiveId:'recover',sequence:2});await a.w.TakechartSafety.checkpoint('test-recovery',old);a.w.document.getElementById('listRecovery').click();await tick();await tick();const select=a.w.document.getElementById('recoverySelection');select.value=[...select.options].find(o=>o.value.startsWith('test-recovery:')).value;a.w.document.getElementById('restoreRecovery').click();await settle(a.w);assert.equal(a.w.eval('archives().length'),2);assert.equal(databaseWrites(a).length,0);a.dom.window.close()});
 test('ログアウト時に復旧コピーが作れなければログアウトを止める',async()=>{const a=await app();a.w.TakechartSafety.checkpoint=async()=>{throw Error('quota')};await a.w.eval('logout()');assert(shown(a,'workspace'));assert(a.w.localStorage.getItem('takechao-cloud-session-v1'));assert(!a.calls.some(x=>x.url.includes('/logout')));a.dom.window.close()});
 test('4つのメニューを切り替えても必要な機能へ到達する',async()=>{const a=await app();for(const [id,panel] of [['tabSheet','sheetPage'],['tabStats','statsPage'],['tabHistory','historyPage'],['tabSettings','settingsPage']]){a.w.document.getElementById(id).click();assert(shown(a,panel))}assert(a.w.document.getElementById('settingsPage').contains(a.w.document.getElementById('manageMaster')));assert(a.w.document.getElementById('historyPage').contains(a.w.document.getElementById('historyList')));a.dom.window.close()});
+
+async function changeIdentity(a,date,sequence){
+ a.w.document.getElementById('editSetIdentity').click();
+ a.w.document.getElementById('setDate').value=date;
+ a.w.document.getElementById('setSequence').value=sequence;
+ await a.w.document.getElementById('setIdentityForm').onsubmit({preventDefault(){}});
+}
+test('対局日と連番を編集しても内部ID・点数・チップ・参加者が変わらない',async()=>{
+ const data=fixture();data.current=structuredClone(set);const a=await app({server:data});
+ await changeIdentity(a,'2026-11-01','3');const current=a.w.eval('JSON.stringify(state)');const result=JSON.parse(current);
+ assert.equal(result.date,'2026/11/01');assert.equal(result.sequence,3);assert.equal(result.archiveId,set.archiveId);
+ assert.deepEqual(result.players,set.players);assert.deepEqual(result.rounds,set.rounds);
+ assert.equal(a.w.eval('archives()[0].date'),'2026/11/15');assert.equal(databaseWrites(a).length,0);
+ assert((await a.w.TakechartSafety.all()).some(r=>r.kind==='before-set-identity-edit'));
+ a.w.document.getElementById('saveSet').click();await settle(a.w);
+ assert.equal(a.remote().data.history.length,1);assert.equal(a.remote().data.history[0].date,'2026/11/01');assert.equal(a.remote().data.history[0].sequence,3);
+ a.dom.window.close();
+});
+test('履歴の対局日・連番も編集し元のセット1件を更新する',async()=>{
+ const a=await app();a.w.eval('startHistoryEdit(0)');await changeIdentity(a,'2026-10-31','2');
+ assert.equal(JSON.parse(a.w.localStorage.getItem('takechart-history-draft-v1')).set.date,'2026/10/31');
+ a.w.document.getElementById('saveSet').click();await settle(a.w);
+ assert.equal(a.remote().data.history.length,1);assert.equal(a.remote().data.history[0].archiveId,'set1');assert.equal(a.remote().data.history[0].date,'2026/10/31');
+ assert.deepEqual(a.remote().data.history[0].rounds,set.rounds);a.dom.window.close();
+});
+test('同日同番号への変更を拒否し、別日同番号は許可する',async()=>{
+ const data=fixture();data.current=structuredClone(set);data.history.push({...structuredClone(set),archiveId:'other',sequence:2});
+ const a=await app({server:data});await changeIdentity(a,'2026-11-15','2');assert.match(a.w.document.getElementById('identityError').textContent,/同じ日付/);assert.equal(a.w.eval('state.sequence'),1);
+ await changeIdentity(a,'2026-11-14','2');assert.equal(a.w.eval('state.sequence'),2);assert.equal(databaseWrites(a).length,0);a.dom.window.close();
+});
+test('無効な日付・0・小数・指数表記を拒否しキャンセルで変更しない',async()=>{
+ const data=fixture();data.current=structuredClone(set);const a=await app({server:data});
+ for(const [day,n]of [['2026-02-30','2'],['2026-11-15','0'],['2026-11-15','1.5'],['2026-11-15','1e2']]){await changeIdentity(a,day,n);assert(a.w.document.getElementById('identityError').textContent);assert.equal(a.w.eval('state.sequence'),1);assert.equal(a.w.eval('state.date'),'2026/11/15');}
+ a.w.document.getElementById('cancelSetIdentity').click();assert(!a.w.document.getElementById('setIdentityDialog').open);assert.equal(databaseWrites(a).length,0);a.dom.window.close();
+});
+test('変更前コピーが保存できなければ日付・連番を変えない',async()=>{
+ const data=fixture();data.current=structuredClone(set);const a=await app({server:data});a.w.TakechartSafety.checkpoint=async()=>{throw Error('quota')};
+ await changeIdentity(a,'2026-11-14','2');assert.equal(a.w.eval('state.date'),'2026/11/15');assert.equal(a.w.eval('state.sequence'),1);assert.match(a.w.document.getElementById('identityError').textContent,/変更していません/);a.dom.window.close();
+});
+test('履歴編集で未保存の進行中セットと同じ日付・番号を選べない',async()=>{
+ const data=fixture();delete data.history[0].archiveId;data.current={...structuredClone(set),date:'2026/11/16',sequence:3};delete data.current.archiveId;
+ const a=await app({server:data});a.w.eval('startHistoryEdit(0)');await changeIdentity(a,'2026-11-16','3');assert.match(a.w.document.getElementById('identityError').textContent,/同じ日付/);a.dom.window.close();
+});
+
 if(process.env.TEST_PUBLIC_SNAPSHOT){
  test('既存181セットの集計・種目別Rが旧版と完全一致しデータを保持',async()=>{
   const {execFileSync}=require('node:child_process');
