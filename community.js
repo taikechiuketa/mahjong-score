@@ -4,13 +4,13 @@ const API='https://takechart-community.finepumpkin4.chatgpt.site/api/community';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const NAME='takechart-community-name-v1',TOKEN='takechart-community-device-v1',PUSH='takechart-community-push-v1';
 const rules={normal:'三麻',north:'四人三麻',yonma:'四麻',undecided:'未定'};
-let token,events=[],selected=null,page='list',editing=null,busy=false,pushBusy=false,detailGeneration=0,lastMessages='';
+let token,events=[],selected=null,page='list',editing=null,busy=false,pushBusy=false,pushCanTest=false,testCooldownUntil=0,detailGeneration=0,lastMessages='';
 function status(text){$('globalStatus').textContent=text;}
 function storedName(){return localStorage.getItem(NAME)||'';}
 function rememberName(value){const name=value.trim();if(!name||name.length>24)throw Error('表示名を1〜24文字で入力してください。');localStorage.setItem(NAME,name);return name;}
 async function api(path,method='GET',body){
  const response=await fetch(API+path,{method,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store',signal:AbortSignal.timeout(20000)});
- const data=await response.json().catch(()=>({error:'サーバーの応答を確認できません。'}));if(!response.ok)throw Error(data.error||'接続に失敗しました。');return data;
+ const data=await response.json().catch(()=>({error:'サーバーの応答を確認できません。'}));if(!response.ok){const error=Error(data.error||'接続に失敗しました。');error.status=response.status;error.code=data.code;error.retryAfter=data.retryAfter;throw error;}return data;
 }
 function navigate(next){page=next;detailGeneration++;['list','detail','form','notifications'].forEach(p=>$(p+'Page').hidden=p!==next);status('');window.scrollTo(0,0);}
 function setUrl(id){const url=new URL(location.href);if(id)url.searchParams.set('event',id);else url.searchParams.delete('event');history.replaceState(null,'',url);}
@@ -54,19 +54,29 @@ document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>guide(b.datas
 const iphone=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 guide(iphone?'iphone':/Android/.test(navigator.userAgent)?'android':'other');
 async function registration(){if(!('serviceWorker'in navigator))throw Error('このブラウザは通知に対応していません。');await navigator.serviceWorker.register('./community-sw.js',{scope:'./'});return navigator.serviceWorker.ready;}
-async function pushState(){try{if(!('Notification'in window)||!('PushManager'in window)){$('pushStatus').textContent=iphone?'ホーム画面に追加したアプリから開いてください。':'このブラウザはプッシュ通知に対応していません。';return;}const reg=await registration(),sub=await reg.pushManager.getSubscription();$('pushStatus').textContent=Notification.permission==='denied'?'通知がブロックされています。下のガイドから端末・ブラウザ設定を確認してください。':sub&&localStorage.getItem(PUSH)==='on'?'この端末の募集通知：ON':'この端末の募集通知：OFF';}catch(e){$('pushStatus').textContent=e.message;}}
+async function pushState(){try{
+ pushCanTest=false;updateTestButton();
+ if(!('Notification'in window)||!('PushManager'in window)){$('pushStatus').textContent=iphone?'ホーム画面に追加したアプリから開いてください。':'このブラウザはプッシュ通知に対応していません。';return;}
+ const reg=await registration(),sub=await reg.pushManager.getSubscription();pushCanTest=!!sub&&localStorage.getItem(PUSH)==='on'&&Notification.permission==='granted';
+ $('pushStatus').textContent=Notification.permission==='denied'?'通知がブロックされています。下のガイドから端末・ブラウザ設定を確認してください。':pushCanTest?'この端末の募集通知：ON':'この端末の募集通知：OFF';
+ }catch(e){$('pushStatus').textContent=e.message;}finally{updateTestButton();}}
 $('openNotifications').onclick=()=>{navigate('notifications');setUrl(null);pushState();};
-function pushButtons(disabled){pushBusy=disabled;['enablePush','disablePush','testPush'].forEach(id=>$(id).disabled=disabled);}
+function updateTestButton(){const remaining=Math.max(0,Math.ceil((testCooldownUntil-Date.now())/1000));$('testPush').disabled=pushBusy||!pushCanTest||remaining>0;$('testPush').textContent=remaining?'テスト通知（あと'+remaining+'秒）':'テスト通知を送る';}
+function cooldown(seconds){testCooldownUntil=Date.now()+Math.max(1,Number(seconds)||30)*1000;try{sessionStorage.setItem('takechart-push-test-retry-v2',String(testCooldownUntil));}catch{}updateTestButton();}
+function pushButtons(disabled){pushBusy=disabled;['enablePush','disablePush'].forEach(id=>$(id).disabled=disabled);updateTestButton();}
+try{testCooldownUntil=Number(sessionStorage.getItem('takechart-push-test-retry-v2'))||0;}catch{}
+setInterval(updateTestButton,1000);updateTestButton();
 $('enablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{
  if(!('Notification'in window)||!('PushManager'in window))throw Error(iphone?'先にホーム画面に追加し、そのアイコンから開いてください。':'Web通知対応のブラウザで開いてください。');
  // Permission prompt starts directly in the user gesture, before network work.
  const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(permission!=='granted')throw Error('通知が許可されませんでした。設定ガイドを確認してください。');
- const [reg,config]=await Promise.all([registration(),api('/config')]);if(!config.publicKey)throw Error('通知サービスを準備中です。');
+ const [reg,config]=await Promise.all([registration(),api('/config')]);if(!config.publicKey||config.push?.ready===false)throw Error('サーバー側の通知設定を確認しています。端末の再登録は不要です。');
  let sub=await reg.pushManager.getSubscription();if(!sub){const raw=atob(config.publicKey.replace(/-/g,'+').replace(/_/g,'/'));sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});}
  await api('/subscription','POST',{subscription:sub.toJSON(),recruit:true});localStorage.setItem(PUSH,'on');await pushState();
  }catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
 $('disablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(sub){await api('/subscription','DELETE',{endpoint:sub.endpoint});if(!await sub.unsubscribe())throw Error('端末の通知解除を確認できません。もう一度お試しください。');}localStorage.setItem(PUSH,'off');await pushState();}catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
-$('testPush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(!sub||localStorage.getItem(PUSH)!=='on')throw Error('先に募集通知をONにしてください。');await api('/test','POST',{endpoint:sub.endpoint});$('pushStatus').textContent='通知サービスに送信しました。端末に表示されるか確認してください。';}catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+$('testPush').onclick=async()=>{if(pushBusy||!pushCanTest||Date.now()<testCooldownUntil)return;pushButtons(true);let attempted=false;try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(!sub||localStorage.getItem(PUSH)!=='on')throw Error('先に募集通知をONにしてください。');attempted=true;const result=await api('/test','POST',{endpoint:sub.endpoint});cooldown(result.retryAfter||30);$('pushStatus').textContent='通知サービスに送信しました。端末に表示されるか確認してください。';}catch(e){if(attempted)cooldown(e.retryAfter||30);if(e.code==='PUSH_EXPIRED')pushCanTest=false;$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+
 try{token=localStorage.getItem(TOKEN);if(!/^[a-f0-9]{64}$/.test(token||'')){token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem(TOKEN,token);}if(localStorage.getItem(TOKEN)!==token)throw Error('保存できません');const id=new URL(location.href).searchParams.get('event');if(id)openEvent(id);else loadList();}catch{status('端末にデータを保存できません。ブラウザの保存設定を確認してください。');document.querySelectorAll('button,input,select,textarea').forEach(e=>e.disabled=true);}
 setInterval(()=>{if(document.hidden||busy)return;if(page==='detail'&&selected)loadDetail(selected.id,true);},5000);
 setInterval(()=>{if(!document.hidden&&!busy&&page==='list')loadList(true);},15000);
