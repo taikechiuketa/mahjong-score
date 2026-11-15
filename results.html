@@ -59,8 +59,8 @@
 .history-share:hover{text-decoration:underline}
 
 #statsTable .player-stats-link,#ratingTable .player-stats-link{display:flex;width:100%;align-items:center;justify-content:space-between;gap:6px;text-align:left;min-height:44px}
-</style></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header><p><a href="./">対局を記録する（ログイン）</a></p>
-<p><a href="./rules.html">たけちゃお公式ルールブック・点数表</a></p><p class="hint" id="publicStatus" role="status">読み込み中…</p><section class="card" id="sharedSet" hidden><p><a href="./results.html">成績・セット履歴一覧へ</a></p><h2>セット結果</h2><div id="sharedResult"></div><button class="secondary" id="copySetLink" type="button" hidden>共有リンクをコピー</button><p id="copySetStatus" role="status"></p></section><div id="statsPage"><section class="card"><h2>通算成績</h2><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="monthly">月間ランキング</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><label id="statsMonthLabel" hidden>対象月 <select id="statsMonth"></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><p class="hint" id="ratingPanelContext"></p><label>ルール <select id="ratingMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><p class="hint">全期間の現在R。「すべて」は全ルールの半荘から計算する総合Rです。20半荘未満は暫定です。名前をタップすると個人成績が開き、表の下には選択期間のR推移が表示されます。</p><div class="rating-scroll"><table id="ratingTable" class="history-table"></table></div><div id="ratingTrend"></div></div><div id="totalsPanel" class="standings-scroll"><p class="hint" id="totalsPanelContext"></p><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><table id="statsTable" class="history-table"></table></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div class="stats-filter"><label>対局者 <select id="historyPlayer"><option value="">すべて</option></select></label><label>ルール <select id="historyRule"><option value="">すべて</option><option value="normal">三人麻雀</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label></div><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleYonma" role="tab" aria-controls="playerStatsResults" data-mode="yonma">四人麻雀</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
+</style><link rel="stylesheet" href="./score-view.css"><script src="./set-analysis.js"></script></head><body><main><header class="brand-header"><img class="brand-logo" src="./takechao-logo.jpg" alt="TAKECHI" width="74" height="82"><div><h1>たけチャート</h1><p class="brand-subtitle"><span>sponsored by</span> たけちゃお</p></div></header><p><a href="./">対局を記録する（ログイン）</a></p>
+<p><a href="./rules.html">たけちゃお公式ルールブック・点数表</a></p><p class="hint" id="publicStatus" role="status">読み込み中…</p><section class="card" id="sharedSet" hidden><p><a href="./results.html">成績・セット履歴一覧へ</a></p><h2>セット結果</h2><div id="sharedResult"></div><button class="secondary" id="copySetLink" type="button" hidden>共有リンクをコピー</button><p id="copySetStatus" role="status"></p></section><div id="statsPage"><section class="card"><h2>成績</h2><div class="navtabs" aria-label="成績表示"><button id="showTotals" class="active" aria-pressed="true">通算成績</button><button id="showRating" aria-pressed="false">レーティング</button></div><div id="ratingPanel" hidden><p class="hint" id="ratingPanelContext"></p><label>ルール <select id="ratingMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><p class="hint">現在R・対象半荘・直近の増減は全期間の対局から計算します。「すべて」は総合Rです。20半荘未満は暫定。名前をタップすると全期間の個人成績が開き、下にR推移を表示します。</p><div class="rating-scroll"><table id="ratingTable" class="history-table"></table></div><section class="rating-trend-section"><h3>R推移</h3><p class="hint">この期間は下の推移グラフだけに適用します。上の現在Rは全期間の値です。</p><div class="stats-filter period-filter" id="ratingTrendPeriodFilter"><label>R推移の表示期間 <select id="ratingTrendPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="monthly">月間ランキング</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><label id="ratingTrendMonthLabel" hidden>対象月 <select id="ratingTrendMonth"></select></label><span id="ratingTrendRange" hidden><label>開始日 <input type="date" id="ratingTrendFrom"></label> <label>終了日 <input type="date" id="ratingTrendTo"></label></span></div><p class="hint" id="ratingTrendPeriodContext"></p><div id="ratingTrend"></div></section></div><div id="totalsPanel"><p class="hint">累計ポイントの高い順。混在セットのチップとその収支は「すべて」に含まれます。</p><div class="stats-filter period-filter" id="totalsPeriodFilter"><label>集計期間 <select id="statsPeriod"><option value="month">今月</option><option value="previous">前月</option><option value="monthly">月間ランキング</option><option value="year">今年</option><option value="all" selected>全期間</option><option value="range">範囲指定</option></select></label><label id="statsMonthLabel" hidden>対象月 <select id="statsMonth"></select></label><span id="statsRange" hidden><label>開始日 <input type="date" id="statsFrom"></label> <label>終了日 <input type="date" id="statsTo"></label></span></div><p class="hint" id="totalsPanelContext"></p><label>ルール <select id="totalsMode"><option value="all">すべて</option><option value="normal">三麻</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label><div class="standings-scroll"><table id="statsTable" class="history-table"></table></div></div><p id="statsNote" class="hint"></p></section><section class="card"><h2>セット履歴</h2><div class="stats-filter"><label>対局者 <select id="historyPlayer"><option value="">すべて</option></select></label><label>ルール <select id="historyRule"><option value="">すべて</option><option value="normal">三人麻雀</option><option value="north">四人三麻</option><option value="yonma">四人麻雀</option></select></label></div><div id="historyList"></div></section></div></main><dialog id="playerStatsDialog" aria-labelledby="playerStatsTitle"><h2 id="playerStatsTitle"></h2><p class="hint" id="playerStatsPeriod"></p><div class="navtabs" id="playerStatsTabs" role="tablist" aria-label="ルール"><button type="button" id="playerRuleAll" role="tab" aria-controls="playerStatsResults" data-mode="all">すべて</button><button type="button" id="playerRuleNormal" role="tab" aria-controls="playerStatsResults" data-mode="normal">三麻</button><button type="button" id="playerRuleNorth" role="tab" aria-controls="playerStatsResults" data-mode="north">四人三麻</button><button type="button" id="playerRuleYonma" role="tab" aria-controls="playerStatsResults" data-mode="yonma">四人麻雀</button><button type="button" id="playerRuleTrend" role="tab" aria-controls="playerStatsResults" data-mode="trend">推移グラフ</button></div><div id="playerStatsResults" role="tabpanel"></div><p class="hint" id="playerStatsIncomplete" hidden></p><p class="hint" id="playerStatsChipsNote" hidden>混在セットのチップとその収支は「すべて」で集計します。</p><p class="hint" id="playerRankHint">着順は必要人数の点数がそろった半荘で集計。同点は同順位です。抜け番は対局数に含みません。</p><form method="dialog" class="modal-actions"><button class="secondary">閉じる</button></form></dialog><script>const cloudUrl='https://oftvswdircgkjdkedtdu.supabase.co';
 const cloudKey='sb_publishable_INcIxUNh_0v-fa6YrT6RDQ_KQTth-Ai';
 async function cloudRequest(path,{token,method='GET',data}={}){
   const headers={apikey:cloudKey};
@@ -118,12 +118,12 @@ function setResults(set,mode='all'){
 function todayMonth(){
   return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit'}).format(new Date());
 }
-function statsDateFilter(){
-  const period=$('statsPeriod').value;
-  $('statsRange').hidden=period!=='range';
+function statsDateFilter(prefix='stats'){
+  const period=$(prefix+'Period').value;
+  $(prefix+'Range').hidden=period!=='range';
   const monthly=period==='monthly';
-  $('statsMonthLabel').hidden=!monthly;
-  const picker=$('statsMonth');
+  $(prefix+'MonthLabel').hidden=!monthly;
+  const picker=$(prefix+'Month');
   if(monthly){
     const selected=picker.value;
     const months=[...new Set([todayMonth(),...historyEntries().map(({set})=>set.date?.replaceAll('/','-').slice(0,7))])]
@@ -131,15 +131,15 @@ function statsDateFilter(){
     picker.replaceChildren(...months.map(month=>new Option(month.replace('-', '年')+'月',month)));
     picker.value=months.includes(selected)?selected:todayMonth();
   }
-  const from=$('statsFrom').value;
-  const to=$('statsTo').value;
+  const from=$(prefix+'From').value;
+  const to=$(prefix+'To').value;
   const now=new Date();
   const month=period==='previous'?new Date(now.getFullYear(),now.getMonth()-1,1):now;
-  const prefix=period==='year'?String(now.getFullYear()):month.getFullYear()+'/'+String(month.getMonth()+1).padStart(2,'0');
+  const datePrefix=period==='year'?String(now.getFullYear()):month.getFullYear()+'/'+String(month.getMonth()+1).padStart(2,'0');
   return set=>{
     if(period==='all')return true;
     if(monthly)return set.date?.replaceAll('/','-').slice(0,7)===picker.value;
-    if(period!=='range')return set.date?.startsWith(prefix);
+    if(period!=='range')return set.date?.startsWith(datePrefix);
     const day=set.date?.replaceAll('/','-');
     return Boolean(day&&(!from||day>=from)&&(!to||day<=to));
   };
@@ -195,19 +195,21 @@ function bindTableSort(id){
     $(id).tHead.querySelector('[data-sort-column="'+column+'"]').focus({preventScroll:true});
   };
 }
-function statsPeriodLabel(){
-  const period=$('statsPeriod');
-  const range=period.value==='monthly'?'（'+$('statsMonth').selectedOptions[0]?.textContent+'）':period.value==='range'?`（${$('statsFrom').value||'指定なし'} ～ ${$('statsTo').value||'指定なし'}）`:'';
+function statsPeriodLabel(prefix='stats'){
+  const period=$(prefix+'Period');
+  const range=period.value==='monthly'?'（'+$(prefix+'Month').selectedOptions[0]?.textContent+'）':period.value==='range'?`（${$(prefix+'From').value||'指定なし'} ～ ${$(prefix+'To').value||'指定なし'}）`:'';
   return period.selectedOptions[0].textContent+range;
 }
+function renderSetBreakdown(set){
+  return TakechartSetView.render(set,{nameOf:p=>master.find(m=>m.id===p.masterId)?.name||p.name});
+}
 function renderStats(){
-  for(const [panel,select] of [['totalsPanel','totalsMode'],['ratingPanel','ratingMode']]){
-    $(panel+'Context').textContent=statsPeriodLabel()+' ・ '+$(select).selectedOptions[0].textContent;
-  }
   const current=editing?.current||state;
   const history=historyEntries();
   const matches=statsDateFilter();
-  if(!$('ratingPanel').hidden)renderRatings(history.map(entry=>entry.set),matches);
+  $('totalsPanelContext').textContent=statsPeriodLabel()+' ・ '+$('totalsMode').selectedOptions[0].textContent;
+  $('ratingPanelContext').textContent='現在R：全期間 ・ '+$('ratingMode').selectedOptions[0].textContent;
+  if(!$('ratingPanel').hidden)renderRatings(history.map(entry=>entry.set),statsDateFilter('ratingTrend'));
   const mode=$('totalsMode').value;
   const rows=aggregateStats(history.map(entry=>entry.set).filter(matches),mode).filter(r=>r.rankingVisible);
   const rankCount=mode==='all'?0:roundSize(mode);
@@ -242,7 +244,7 @@ function renderStats(){
   $('historyList').innerHTML=filtered.length?filtered.map(({set,index})=>{
     const results=setResults(set);
     const label="",edit="",remove="";
-    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p><div class="history-actions">${edit}${remove}${setShareLink(set,history)}</div><table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table></details>`;
+    return `<details class="history-card"><summary>${esc(set.date||'日付不明')} - ${esc(set.sequence||1)} ${label}　${results.length}人 <span class="pill">${[...new Set(set.rounds.map(round=>roundLabel(round.mode)))].join(" ／ ")||"ルール未設定"}</span></summary><p class="hint">ポイント倍率 ${esc(set.rate??"—")} ／ チップレート ${esc(set.chipRate??"—")} pt/枚</p><div class="history-actions">${edit}${remove}${setShareLink(set,history)}</div><table class="history-table"><thead><tr><th>名前</th><th>pt</th><th>チップ</th><th>精算額</th></tr></thead><tbody>${results.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)}pt</td></tr>`).join('')}</tbody></table>${renderSetBreakdown(set)}</details>`;
   }).join(''):'<p class="hint">条件に合うセットはありません。</p>';
   $('historyPlayer').onchange=$('historyRule').onchange=renderStats;
 }
@@ -292,6 +294,7 @@ function calculateRatings(sets,mode){
 }
 let ratingPlayerId;
 function renderRatings(sets,matches){
+  $('ratingTrendPeriodContext').textContent=statsPeriodLabel('ratingTrend');
   const ratings=calculateRatings(sets,$('ratingMode').value);
   const rows=ratings.filter(p=>p.rankingVisible);
   $('ratingTable').innerHTML=sortedTable('ratingTable',['プレイヤー','現在R','対象半荘','直近'],rows,p=>[p.name,p.rating,p.history.length,p.change])+'<tbody>'+rows.map(p=>
@@ -302,7 +305,7 @@ function renderRatings(sets,matches){
   const panel=$('ratingTrend');
   panel.textContent='';
   if(!rows.length){panel.textContent='対象の半荘はまだありません。';return}
-  if(!player)return;
+  if(!player){panel.textContent='プレイヤー名を選ぶとR推移を表示します。';return;}
   if(!points.length){panel.textContent='選択期間に対象の半荘がありません。';return}
   const values=[points[0].before,...points.map(p=>p.rating)];
   const min=values.reduce((a,b)=>Math.min(a,b));
@@ -323,14 +326,17 @@ function selectStatsView(rating){
 $('showTotals').onclick=()=>selectStatsView(false);
 $('showRating').onclick=()=>selectStatsView(true);
 $('ratingMode').onchange=renderStats;
+for(const id of ['ratingTrendPeriod','ratingTrendMonth','ratingTrendFrom','ratingTrendTo'])$(id).onchange=renderStats;
+
 $('ratingTable').onclick=e=>{
   const button=e.target.closest('[data-rating-player]');
   if(!button)return;
   ratingPlayerId=button.dataset.ratingPlayer;
-  renderRatings([...historyEntries().map(entry=>entry.set),editing?.current||state],statsDateFilter());
-  openPlayerStats(ratingPlayerId,button.firstChild.textContent,$('ratingMode').value);
+  renderRatings([...historyEntries().map(entry=>entry.set),editing?.current||state],statsDateFilter('ratingTrend'));
+  openPlayerStats(ratingPlayerId,button.firstChild.textContent,$('ratingMode').value,true);
 };
 let selectedPlayerId;
+let playerStatsAllTime=false;
 let playerStatsMode='all';
 function renderPlayerTrends(sets){
   const series=[['ポイント','pt'],['チップ','枚'],['収支','pt']];
@@ -409,7 +415,7 @@ function renderOpponentStats(sets,mode){
 }
 function renderPlayerStats(){
   const current=editing?.current||state;
-  const matches=statsDateFilter();
+  const matches=playerStatsAllTime?()=>true:statsDateFilter();
   const mode=playerStatsMode;
   const sets=[...historyEntries().map(entry=>entry.set),current].filter(matches);
   if(mode==='trend'){
@@ -479,7 +485,8 @@ $('statsTable').onclick=e=>{
   if(!button)return;
   openPlayerStats(button.dataset.playerStats,button.firstChild.textContent);
 };
-function openPlayerStats(id,name,mode='all'){
+function openPlayerStats(id,name,mode='all',allTime=false){
+  playerStatsAllTime=allTime;
   selectedPlayerId=id;
   $('playerStatsTitle').textContent=name+'の個人成績';
   selectPlayerStatsTab(mode);
@@ -487,7 +494,7 @@ function openPlayerStats(id,name,mode='all'){
 }
 function selectPlayerStatsTab(mode){
   playerStatsMode=mode;
-  $('playerStatsPeriod').textContent=statsPeriodLabel()+' ・ '+(mode==='all'?'すべてのルール':mode==='trend'?'すべてのルール・推移':roundLabel(mode));
+  $('playerStatsPeriod').textContent=(playerStatsAllTime?'全期間':statsPeriodLabel())+' ・ '+(mode==='all'?'すべてのルール':mode==='trend'?'すべてのルール・推移':roundLabel(mode));
   for(const tab of $('playerStatsTabs').querySelectorAll('[role="tab"]')){
     const selected=tab.dataset.mode===mode;
     tab.classList.toggle('active',selected);
@@ -533,13 +540,9 @@ function renderSharedSet(){
     <div style="overflow-x:auto"><table class="history-table"><thead><tr><th scope="col">プレイヤー</th><th scope="col">ポイント</th><th scope="col">チップ</th><th scope="col">精算額</th></tr></thead><tbody>
     ${results.map(r=>`<tr><th scope="row">${esc(r.name)}</th><td>${fmt(r.pt)}</td><td>${fmt(r.chips)}</td><td>${fmt(r.yen)} pt</td></tr>`).join('')}
     </tbody></table></div>
-    <h3>半荘別スコア</h3>
-    <div style="overflow-x:auto"><table class="history-table"><thead><tr><th scope="col">半荘</th>${results.map(r=>`<th scope="col">${esc(r.name)}</th>`).join('')}</tr></thead><tbody>
-    ${set.rounds.map((round,i)=>`<tr><th scope="row">${i+1} ・ ${esc(roundLabel(round.mode))}</th>${set.players.map(p=>{
-      const score=round.scores?.[p.id];
-      return score==null||score===''||score==='skip'?'<td>—</td>':`<td class="${Number(score)<0?'negative':''}">${fmt(Number(score))}</td>`;
-    }).join('')}</tr>`).join('')}
-    </tbody></table></div>`;
+    ${TakechartSetView.analysis(set)}
+    <h3>半荘別スコア</h3><p class="hint">表内をスクロールしても対局者名と半荘番号は固定されます。</p>
+    ${TakechartSetView.scoreTable(set)}`;
 }
 $('copySetLink').onclick=async()=>{
   const url=new URL('./results.html',location.href);

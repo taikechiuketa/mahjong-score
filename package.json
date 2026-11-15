@@ -2,7 +2,7 @@
   "name": "takechart",
   "private": true,
   "scripts": {
-    "test": "node tests/auth-safety.test.cjs && node tests/rules-auth.test.cjs"
+    "test": "node tests/auth-safety.test.cjs && node tests/rules-auth.test.cjs && node tests/score-view.test.cjs"
   },
   "devDependencies": {
     "fake-indexeddb": "6.2.8",

@@ -44,6 +44,7 @@ async function app({local,server=fixture(),session=true,fail,baseline,denyBackup
   w.eval(fs.readFileSync('data-safety.js','utf8'));await w.TakechartSafety.ready;
   if(baseline)await w.TakechartSafety.put({id:'baseline:'+owner,data:baseline,revision:'rev1'});
   if(denyBackup)w.TakechartSafety.checkpoint=async()=>{throw Error('quota')};
+  w.eval(fs.readFileSync('set-analysis.js','utf8'));
   const inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
   for(const code of inline)vm.runInContext(code,dom.getInternalVMContext());
   vm.runInContext(fs.readFileSync('index-auth.js','utf8'),dom.getInternalVMContext());
@@ -115,6 +116,7 @@ test('履歴編集で未保存の進行中セットと同じ日付・番号を�
  const a=await app({server:data});a.w.eval('startHistoryEdit(0)');await changeIdentity(a,'2026-11-16','3');assert.match(a.w.document.getElementById('identityError').textContent,/同じ日付/);a.dom.window.close();
 });
 
+test('入力表で半荘を追加すると名前を維持して表の末尾へ移動する',async()=>{const data=fixture();data.current=structuredClone(set);const a=await app({server:data});const scroller=a.w.document.getElementById('inputScoreScroll');Object.defineProperty(scroller,'scrollHeight',{value:1200});const names=a.w.document.querySelector('#sheet thead').textContent;a.w.document.getElementById('addRound').click();assert.equal(a.w.eval('state.rounds.length'),2);assert.equal(scroller.scrollTop,1200);assert.equal(a.w.document.querySelector('#sheet thead').textContent,names);assert.equal(databaseWrites(a).length,0);a.dom.window.close()});
 if(process.env.TEST_PUBLIC_SNAPSHOT){
  test('既存181セットの集計・種目別Rが旧版と完全一致しデータを保持',async()=>{
   const {execFileSync}=require('node:child_process');
