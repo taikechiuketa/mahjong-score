@@ -59,13 +59,39 @@ function guide(kind){$('guideContent').innerHTML=guides[kind];document.querySele
 document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>guide(b.dataset.guide));
 const iphone=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 guide(iphone?'iphone':/Android/.test(navigator.userAgent)?'android':'other');
-async function registration(){if(!('serviceWorker'in navigator))throw Error('このブラウザは通知に対応していません。');await navigator.serviceWorker.register('./community-sw.js',{scope:'./'});return navigator.serviceWorker.ready;}
-async function pushState(){try{
- pushCanTest=false;updateTestButton();
+async function registration(){if(!('serviceWorker'in navigator))throw Error('このブラウザは通知に対応していません。');await navigator.serviceWorker.register('./community-sw.js',{scope:'./',updateViaCache:'none'});return navigator.serviceWorker.ready;}
+let forcePushRenewal=false;
+async function pushLock(fn){return navigator.locks?.request?navigator.locks.request('takechart-push-registration',fn):fn();}
+function pushReady(sub){pushCanTest=!!sub;updateTestButton();}
+function publicKeyBytes(key){return Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));}
+async function ensurePush(reg,interactive=false){
+ let sub=await reg.pushManager.getSubscription(),missing=!sub;
+ if(!sub)await api('/subscription/report','POST',{reason:'browser_missing'}).catch(()=>{});
+ if(sub){try{missing=(await api('/subscription/status','POST',{endpoint:sub.endpoint})).state!=='registered';}
+ catch(e){if(e.code!=='PUSH_IDENTITY_MISMATCH'||!interactive)throw e;missing=true;}}
+ if(missing||forcePushRenewal){
+  const config=await api('/config');
+  if(!config.publicKey||config.push?.ready===false)throw Error('サーバー側の通知設定を確認しています。端末の再登録は不要です。');
+  // Retire only this browser's subscription. Never delete another actor's server row.
+  if(sub&&!await sub.unsubscribe())throw Error('通知先を更新できません。「募集通知をONにする」から再度お試しください。');
+  sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicKeyBytes(config.publicKey)});
+ }
+ // Refresh keys too: a provider can renew a subscription without changing its address.
+ await api('/subscription','POST',{subscription:sub.toJSON(),recruit:true});
+ forcePushRenewal=false;return sub;
+}
+async function checkPushState(){
+ pushReady(null);
  if(!('Notification'in window)||!('PushManager'in window)){$('pushStatus').textContent=iphone?'ホーム画面に追加したアプリから開いてください。':'このブラウザはプッシュ通知に対応していません。';return;}
- const reg=await registration(),sub=await reg.pushManager.getSubscription();pushCanTest=!!sub&&localStorage.getItem(PUSH)==='on'&&Notification.permission==='granted';
- $('pushStatus').textContent=Notification.permission==='denied'?'通知がブロックされています。下のガイドから端末・ブラウザ設定を確認してください。':pushCanTest?'この端末の募集通知：ON':'この端末の募集通知：OFF';
- }catch(e){$('pushStatus').textContent=e.message;}finally{updateTestButton();}}
+ if(Notification.permission==='denied'){if(localStorage.getItem(PUSH)==='on')await api('/subscription/report','POST',{reason:'permission_denied'}).catch(()=>{});$('pushStatus').textContent='通知がブロックされています。下のガイドから端末・ブラウザ設定を確認してください。';return;}
+ if(localStorage.getItem(PUSH)!=='on'){$('pushStatus').textContent='この端末の募集通知：OFF';return;}
+ if(Notification.permission!=='granted'){await api('/subscription/report','POST',{reason:'permission_prompt'}).catch(()=>{});$('pushStatus').textContent='通知の許可が必要です。「募集通知をONにする」を押してください。';return;}
+ $('pushStatus').textContent='通知登録を確認・復旧しています…';
+ const reg=await registration();
+ try{const sub=await ensurePush(reg);pushReady(sub);$('pushStatus').textContent='この端末の募集通知：ON（サーバー登録確認済み）';}
+ catch(e){pushReady(null);$('pushStatus').textContent=e.code==='PUSH_IDENTITY_MISMATCH'?e.message:'通知登録を確認・復旧できませんでした。'+e.message+' 「募集通知をONにする」から再度お試しください。';}
+}
+async function pushState(){if(pushBusy)return;pushButtons(true);try{await pushLock(checkPushState);}catch(e){pushReady(null);$('pushStatus').textContent='通知登録を確認できません。'+e.message;}finally{pushButtons(false);}}
 $('openNotifications').onclick=()=>{navigate('notifications');setUrl(null);pushState();};
 function updateTestButton(){const remaining=Math.max(0,Math.ceil((testCooldownUntil-Date.now())/1000));$('testPush').disabled=pushBusy||!pushCanTest||remaining>0;$('testPush').textContent=remaining?'テスト通知（あと'+remaining+'秒）':'テスト通知を送る';}
 function cooldown(seconds){testCooldownUntil=Date.now()+Math.max(1,Number(seconds)||30)*1000;try{sessionStorage.setItem('takechart-push-test-retry-v2',String(testCooldownUntil));}catch{}updateTestButton();}
@@ -74,17 +100,21 @@ try{testCooldownUntil=Number(sessionStorage.getItem('takechart-push-test-retry-v
 setInterval(updateTestButton,1000);updateTestButton();
 $('enablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{
  if(!('Notification'in window)||!('PushManager'in window))throw Error(iphone?'先にホーム画面に追加し、そのアイコンから開いてください。':'Web通知対応のブラウザで開いてください。');
- // Permission prompt starts directly in the user gesture, before network work.
  const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(permission!=='granted')throw Error('通知が許可されませんでした。設定ガイドを確認してください。');
- const [reg,config]=await Promise.all([registration(),api('/config')]);if(!config.publicKey||config.push?.ready===false)throw Error('サーバー側の通知設定を確認しています。端末の再登録は不要です。');
- let sub=await reg.pushManager.getSubscription();if(!sub){const raw=atob(config.publicKey.replace(/-/g,'+').replace(/_/g,'/'));sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:Uint8Array.from(raw,c=>c.charCodeAt(0))});}
- await api('/subscription','POST',{subscription:sub.toJSON(),recruit:true});localStorage.setItem(PUSH,'on');await pushState();
- }catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
-$('disablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(sub){await api('/subscription','DELETE',{endpoint:sub.endpoint});if(!await sub.unsubscribe())throw Error('端末の通知解除を確認できません。もう一度お試しください。');}localStorage.setItem(PUSH,'off');await pushState();}catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
-$('testPush').onclick=async()=>{if(pushBusy||!pushCanTest||Date.now()<testCooldownUntil)return;pushButtons(true);let attempted=false;try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(!sub||localStorage.getItem(PUSH)!=='on')throw Error('先に募集通知をONにしてください。');attempted=true;const result=await api('/test','POST',{endpoint:sub.endpoint});cooldown(result.retryAfter||30);$('pushStatus').textContent='通知サービスに送信しました。端末に表示されるか確認してください。';}catch(e){if(attempted)cooldown(e.retryAfter||30);if(e.code==='PUSH_EXPIRED')pushCanTest=false;$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+ await pushLock(async()=>{const reg=await registration(),sub=await ensurePush(reg,true);localStorage.setItem(PUSH,'on');pushReady(sub);$('pushStatus').textContent='この端末の募集通知：ON（サーバー登録確認済み）';});
+ }catch(e){pushReady(null);$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+$('disablePush').onclick=async()=>{if(pushBusy)return;pushButtons(true);try{await pushLock(async()=>{
+ // Persist the explicit OFF intent before network work so recovery never re-enables it.
+ localStorage.setItem(PUSH,'off');pushReady(null);
+ const reg=await registration(),sub=await reg.pushManager.getSubscription();if(sub){await api('/subscription','DELETE',{endpoint:sub.endpoint});if(!await sub.unsubscribe())throw Error('端末の通知解除を確認できません。もう一度お試しください。');}
+ await checkPushState();});}catch(e){$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
+$('testPush').onclick=async()=>{if(pushBusy||!pushCanTest||Date.now()<testCooldownUntil)return;pushButtons(true);let attempted=false;try{const reg=await registration(),sub=await reg.pushManager.getSubscription();if(!sub||localStorage.getItem(PUSH)!=='on')throw Error('先に募集通知をONにしてください。');attempted=true;const result=await api('/test','POST',{endpoint:sub.endpoint});cooldown(result.retryAfter||30);$('pushStatus').textContent='通知サービスに送信しました。端末に表示されるか確認してください。';}catch(e){if(attempted)cooldown(e.retryAfter||30);if(e.code==='PUSH_EXPIRED'||e.code==='PUSH_MISSING'){forcePushRenewal=true;pushReady(null);}$('pushStatus').textContent=e.message;}finally{pushButtons(false);}};
 
 try{token=localStorage.getItem(TOKEN);if(!/^[a-f0-9]{64}$/.test(token||'')){token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');localStorage.setItem(TOKEN,token);}if(localStorage.getItem(TOKEN)!==token)throw Error('保存できません');const id=new URL(location.href).searchParams.get('event');if(id)openEvent(id);else loadList();}catch{status('端末にデータを保存できません。ブラウザの保存設定を確認してください。');document.querySelectorAll('button,input,select,textarea').forEach(e=>e.disabled=true);}
+if(localStorage.getItem(PUSH)==='on')pushState();
+navigator.serviceWorker?.addEventListener?.('message',event=>{if(event.data?.type==='push-registration-changed'&&localStorage.getItem(PUSH)==='on'){api('/subscription/report','POST',{reason:'browser_changed'}).catch(()=>{});pushState();}});
+setInterval(()=>{if(!document.hidden&&localStorage.getItem(PUSH)==='on')pushState();},180000);
 setInterval(()=>{if(document.hidden||busy)return;if(page==='detail'&&selected)loadDetail(selected.id,true);},5000);
 setInterval(()=>{if(!document.hidden&&!busy&&page==='list')loadList(true);},15000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!busy){if(page==='detail'&&selected)loadDetail(selected.id);else if(page==='list')loadList();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!busy){if(localStorage.getItem(PUSH)==='on')pushState();if(page==='detail'&&selected)loadDetail(selected.id);else if(page==='list')loadList();}});
 })();
