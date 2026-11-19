@@ -10,3 +10,12 @@ self.addEventListener('notificationclick',event=>{
  const safe=target.origin===base.origin&&target.pathname===base.pathname+'community.html'?target.href:new URL('community.html',base).href;
  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{const existing=clients.find(c=>c.url.startsWith(base.href));if(existing){await existing.navigate(safe);return existing.focus();}return self.clients.openWindow(safe);}));
 });
+
+// Browsers that support subscription refresh notify open pages immediately.
+// Browsers without this event are covered by startup/resume reconciliation.
+self.addEventListener('pushsubscriptionchange',event=>{
+ event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(clients=>{
+  const base=new URL('./',self.location.href);
+  for(const client of clients)if(client.url.startsWith(base.href))client.postMessage({type:'push-registration-changed'});
+ }));
+});
